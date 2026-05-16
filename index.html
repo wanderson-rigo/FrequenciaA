@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Frequência - Completo</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --surface: #ffffff;
+            --surface-soft: #f9fafb;
+            --border: #e5e7eb;
+            --text: #172033;
+            --muted: #667085;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --shadow: 0 10px 28px rgba(23, 32, 51, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        .login-screen {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .login-card {
+            width: min(100%, 420px);
+            padding: 28px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .login-card h1 {
+            margin: 0 0 10px;
+            font-size: 26px;
+        }
+
+        .login-card p {
+            margin: 0 0 18px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .login-error {
+            margin-top: 16px;
+            padding: 12px;
+            color: #991b1b;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+        }
+
+        .tabs {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.94);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 4px 18px rgba(23, 32, 51, 0.06);
+        }
+
+        .tabs button {
+            flex: 1;
+            min-height: 44px;
+            padding: 11px 12px;
+            color: var(--muted);
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.18s ease;
+        }
+
+        .tabs button:hover,
+        .tabs button.active {
+            color: var(--primary);
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        .tabs button:disabled {
+            color: #b3b8c4;
+            background: transparent;
+            border-color: transparent;
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+
+        .tabs button:disabled:hover {
+            color: #b3b8c4;
+            background: transparent;
+            border-color: transparent;
+        }
+
+        .session-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .session-user {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .session-user b {
+            color: var(--text);
+        }
+
+        .secondary-button {
+            min-height: 36px;
+            color: var(--primary);
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+        }
+
+        .secondary-button:hover {
+            color: #fff;
+            background: var(--primary);
+        }
+
+        .tab {
+            display: none;
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 28px 0 40px;
+        }
+
+        h2 {
+            margin: 0 0 18px;
+            font-size: 26px;
+            line-height: 1.2;
+        }
+
+        h3 {
+            margin-top: 0;
+        }
+
+        input,
+        select {
+            width: min(100%, 520px);
+            padding: 12px 14px;
+            color: var(--text);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            outline: none;
+            font: inherit;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+        }
+
+        select {
+            min-height: 180px;
+        }
+
+        button {
+            min-height: 42px;
+            padding: 10px 16px;
+            color: #fff;
+            background: var(--primary);
+            border: 0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.18s ease;
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+        }
+
+        .tabs button {
+            color: var(--muted);
+            background: transparent;
+            border: 1px solid transparent;
+        }
+
+        .tabs button:hover {
+            background: #eff6ff;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+
+        .help {
+            margin: -6px 0 18px;
+            padding: 12px 14px;
+            color: var(--muted);
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+
+        .help b {
+            color: var(--text);
+        }
+
+        .disciplinas-toolbar {
+            display: grid;
+            gap: 10px;
+            width: min(100%, 640px);
+            margin-bottom: 18px;
+        }
+
+        .disciplinas-toolbar select {
+            width: 100%;
+        }
+
+        .disciplinas-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .card {
+            background: var(--surface);
+            padding: 16px;
+            margin: 12px 0;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: 0.18s ease;
+        }
+
+        .card:hover {
+            border-color: #c7d2fe;
+            transform: translateY(-2px);
+        }
+
+        .selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), var(--shadow);
+        }
+
+        .risco-legenda {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .risco-leve {
+            background: #fef3c7;
+            border-color: #f59e0b;
+            border-left: 8px solid #d97706;
+        }
+
+        .risco-alto {
+            background: #fed7aa;
+            border-color: #ea580c;
+            border-left: 8px solid #c2410c;
+        }
+
+        .risco-critico {
+            background: #fecaca;
+            border-color: #dc2626;
+            border-left: 8px solid #991b1b;
+        }
+
+        .heatmap {
+            display: grid;
+            grid-template-columns: repeat(14, 18px);
+            gap: 4px;
+            margin-top: 14px;
+        }
+
+        .box {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+        }
+
+        .log,
+        #preview {
+            margin-top: 16px;
+            border-radius: 8px;
+        }
+
+        .log[hidden] {
+            display: none;
+        }
+
+        .log {
+            min-height: 44px;
+            background: #101828;
+            color: #86efac;
+            padding: 14px;
+            font-family: Consolas, monospace;
+            line-height: 1.5;
+        }
+
+        .preview-card {
+            padding: 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .preview-card h3 {
+            margin: 0 0 10px;
+        }
+
+        .preview-card table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .preview-card th,
+        .preview-card td {
+            padding: 9px 8px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .preview-card th {
+            color: var(--muted);
+            background: var(--surface-soft);
+        }
+
+        #preview,
+        #resAluno,
+        #resDisciplinas,
+        #resRisco,
+        #areaEstatisticas {
+            margin-top: 18px;
+        }
+
+        #listaAlunos {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+            margin-bottom: 25px;
+        }
+
+        #listaAlunos .card {
+            margin: 0;
+        }
+
+        #resAluno {
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .aluno-card {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .aluno-total {
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        canvas {
+            max-height: 360px;
+            margin-top: 12px;
+        }
+
+        @media (max-width: 720px) {
+            .tabs {
+                overflow-x: auto;
+            }
+
+            .tabs button {
+                flex: 0 0 auto;
+            }
+
+            .toolbar {
+                display: grid;
+            }
+
+            .disciplinas-actions {
+                display: block;
+            }
+
+            input,
+            select,
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loginScreen" class="login-screen">
+        <div class="login-card">
+            <h1>Acesso restrito</h1>
+            <p>Entre com uma conta Google institucional terminada em <b>@ifc.edu.br</b>.</p>
+            <div id="googleLoginButton"></div>
+            <div id="loginError" class="login-error" hidden></div>
+        </div>
+    </div>
+
+    <div id="appShell" hidden>
+
+    <div class="session-bar">
+        <div id="usuarioSessao" class="session-user"></div>
+        <button class="secondary-button" onclick="trocarContaGoogle()">Trocar conta</button>
+    </div>
+
+    <div class="tabs">
+        <button class="active" onclick="openTab('import')">📥 Importar</button>
+        <button onclick="openTab('alunos')" data-requer-importacao disabled>👤 Alunos</button>
+        <button onclick="openTab('disciplinas')" data-requer-importacao disabled>📚 Disciplinas</button>
+        <button onclick="openTab('risco')" data-requer-importacao disabled>⚠️ Risco</button>
+        <button onclick="openTab('estatisticas')" data-requer-importacao disabled>📊 Estatísticas</button>
+    </div>
+
+    <!-- IMPORT -->
+    <div id="import" class="tab" style="display:block">
+        <h2>Importar CSV</h2>
+        <div class="help">
+            <b>Como usar:</b> os dados são carregados automaticamente de <b>faltas.sqlite</b> ao abrir a página. Se desejar, selecione um arquivo CSV para sobrescrever os dados carregados, confira a prévia e clique em <b>Confirmar importação</b>.
+        </div>
+        <div class="toolbar">
+            <input type="file" id="fileInput" accept=".csv">
+            <button onclick="confirmarImportacao()">Confirmar importação</button>
+        </div>
+        <div id="preview"></div>
+        <div id="log" class="log" hidden></div>
+    </div>
+
+    <!-- ALUNOS -->
+    <div id="alunos" class="tab">
+        <h2>Alunos</h2>
+        <div class="help">
+            <b>Como usar:</b> digite parte do nome do aluno, clique em <b>Buscar</b> e depois clique no cartão do aluno para ver resumo, faltas e disciplinas.
+        </div>
+        <div class="toolbar">
+            <input id="buscaAluno" placeholder="Digite parte do nome do aluno">
+            <button onclick="buscarAluno()">Buscar</button>
+        </div>
+        <div id="listaAlunos"></div>
+        <div id="resAluno"></div>
+    </div>
+
+    <!-- DISCIPLINAS -->
+    <div id="disciplinas" class="tab">
+        <h2>Disciplinas</h2>
+        <div class="help">
+            <b>Como usar:</b> escolha uma ou mais disciplinas e clique em <b>Analisar</b>. Também é possível dar duplo clique na lista. Use <b>Todas as disciplinas</b> para ver a tendência geral.
+        </div>
+        <div class="disciplinas-toolbar">
+            <select id="selectDisciplinas" multiple size="6" ondblclick="analisarDisciplinas()"></select>
+            <div class="disciplinas-actions">
+                <button onclick="analisarDisciplinas()">Analisar</button>
+            </div>
+        </div>
+        <div id="resDisciplinas"></div>
+    </div>
+
+    <!-- RISCO -->
+    <div id="risco" class="tab">
+        <h2>Risco</h2>
+        <div class="help">
+            <b>Como usar:</b> clique em <b>Calcular</b> para listar todos os alunos em risco. Clique na legenda amarela, laranja ou vermelha para filtrar por faixa; depois clique no aluno para detalhar.
+            <br><br>
+            <b>Como o risco é calculado:</b> para cada aluno em cada disciplina, o sistema soma as faltas e divide pela carga horária da disciplina. Exemplo: 40 faltas em 72 aulas = 55,6%.
+            Entram no risco apenas percentuais acima de 25%.
+            <br>
+            <b>Ordenação:</b> o ranking mostra primeiro quem está em risco em mais disciplinas. Em caso de empate, vem primeiro quem tem a maior soma dos percentuais de risco.
+        </div>
+
+        <div class="risco-legenda">
+            <div class="card risco-leve" data-risco="risco-leve" onclick="calcularRisco('risco-leve')">🟡 25-39%</div>
+            <div class="card risco-alto" data-risco="risco-alto" onclick="calcularRisco('risco-alto')">🟠 40-59%</div>
+            <div class="card risco-critico" data-risco="risco-critico" onclick="calcularRisco('risco-critico')">🔴 60%+</div>
+        </div>
+
+        <button onclick="calcularRisco()">Calcular</button>
+        <div id="resRisco"></div>
+    </div>
+
+    <div id="estatisticas" class="tab">
+
+        <h2>📊 Estatísticas</h2>
+        <div class="help">
+            <b>Como usar:</b> após importar o CSV, clique em <b>Gerar Estatísticas</b> para criar gráficos gerais de faltas por disciplina, ranking e dia da semana.
+        </div>
+
+        <button onclick="gerarEstatisticas()">Gerar Estatísticas</button>
+
+        <div id="areaEstatisticas"></div>
+
+    </div>
+
+    </div>
+
+    <script>
+
+        const GOOGLE_CLIENT_ID = "227878598620-0ef02dat1j327tho6evko0c2kt3i2eq5.apps.googleusercontent.com"
+        const DOMINIO_PERMITIDO = "@ifc.edu.br"
+
+        let dados = [], dadosTemp = []
+        let usuarioAutenticado = null
+
+        window.addEventListener("load", iniciarLogin)
+        window.addEventListener("load", carregarDadosSQLite)
+
+        async function carregarDadosSQLite() {
+            try {
+                const resposta = await fetch('/api/sqlite')
+                if (!resposta.ok) {
+                    throw new Error(`API SQLite não disponível: ${resposta.status} ${resposta.statusText}`)
+                }
+
+                const j = await resposta.json()
+
+                if (!j.columns || !j.rows) {
+                    throw new Error("Resposta da API não contém colunas ou linhas.")
+                }
+
+                const colunas = j.columns
+                dados = j.rows.map(linha => {
+                    const registro = {}
+                    colunas.forEach((coluna, indice) => registro[coluna] = linha[indice])
+
+                    const percentual = parseFloat(String(registro.percentual_faltas || "").replace("%", "").replace(",", "."))
+
+                    return {
+                        nome: String(registro.nome || "").trim(),
+                        disciplina: String(registro.disciplina || "").trim(),
+                        data: String(registro.data || "").trim(),
+                        aula: parseInt(registro.aula) || 0,
+                        faltas: parseInt(registro.faltas) || 0,
+                        carga_horaria: parseFloat(registro.carga_horaria) || 0,
+                        perc: isNaN(percentual) ? 0 : percentual / 100,
+                        situacao: String(registro.situacao || "")
+                    }
+                })
+
+                dadosTemp = dados.slice()
+                atualizarAbasImportacao()
+                popularDisciplinas()
+                mostrarLog(`Dados carregados automaticamente via API SQLite. Linhas carregadas: ${dados.length}. Para sobrescrever, importe um CSV válido.`)
+            } catch (erro) {
+                mostrarLog(`Não foi possível carregar dados via API. Importe um CSV ou inicie o servidor que serve a pasta 'saida'.<br><br>${escaparHTML(erro.message || String(erro))}`)
+            }
+        }
+
+        function iniciarLogin() {
+            if (GOOGLE_CLIENT_ID.includes("COLE_AQUI")) {
+                mostrarErroLogin("Configure o GOOGLE_CLIENT_ID no arquivo index.html para habilitar o acesso com Google.")
+                return
+            }
+
+            if (location.protocol === "file:") {
+                mostrarErroLogin(`
+O login Google não funciona abrindo o HTML direto como arquivo local.<br><br>
+Rode a página por um servidor local, por exemplo <b>http://localhost:8000/saida/index.html</b>, ou publique em <b>https://fabrica.videira.ifc.edu.br/faltasCCO</b>.<br><br>
+Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript origins</b>.
+`)
+                return
+            }
+
+            if (!window.google?.accounts?.id) {
+                mostrarErroLogin("Não foi possível carregar o login do Google. Verifique sua conexão com a internet.")
+                return
+            }
+
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: validarLoginGoogle,
+                hosted_domain: "ifc.edu.br"
+            })
+
+            google.accounts.id.renderButton(
+                document.getElementById("googleLoginButton"),
+                {
+                    theme: "outline",
+                    size: "large",
+                    width: 360,
+                    text: "signin_with",
+                    locale: "pt-BR"
+                }
+            )
+
+            google.accounts.id.disableAutoSelect()
+        }
+
+        function mostrarErroLogin(mensagem) {
+            loginError.innerHTML = mensagem
+            loginError.hidden = false
+        }
+
+        function decodificarTokenGoogle(token) {
+            let base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")
+            let json = decodeURIComponent(atob(base64).split("").map(c => {
+                return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)
+            }).join(""))
+
+            return JSON.parse(json)
+        }
+
+        function validarLoginGoogle(response) {
+            let perfil
+
+            try {
+                perfil = decodificarTokenGoogle(response.credential)
+            } catch (e) {
+                mostrarErroLogin("Não foi possível validar o login do Google. Tente novamente.")
+                return
+            }
+
+            let email = (perfil.email || "").toLowerCase()
+
+            if (!email.endsWith(DOMINIO_PERMITIDO)) {
+                mostrarErroLogin(`Acesso negado para ${email || "esta conta"}. Use uma conta Google terminada em ${DOMINIO_PERMITIDO}.`)
+                google.accounts.id.disableAutoSelect()
+                return
+            }
+
+            usuarioAutenticado = perfil
+            usuarioSessao.innerHTML = `Conta conectada: <b>${email}</b>`
+            loginError.hidden = true
+            loginScreen.hidden = true
+            appShell.hidden = false
+            atualizarAbasImportacao()
+        }
+
+        function trocarContaGoogle() {
+            usuarioAutenticado = null
+            google.accounts.id.disableAutoSelect()
+            appShell.hidden = true
+            loginScreen.hidden = false
+            loginError.hidden = true
+            usuarioSessao.innerHTML = ""
+
+            if (window.google?.accounts?.id) {
+                google.accounts.id.prompt()
+            }
+        }
+
+        // TABS
+        function openTab(id) {
+            if (id !== "import" && dados.length === 0) {
+                alert("Importe e confirme um CSV antes de acessar esta aba.")
+                return
+            }
+
+            document.querySelectorAll('.tab').forEach(t => t.style.display = "none")
+            document.querySelectorAll('.tabs button').forEach(b => b.classList.remove("active"))
+            document.getElementById(id).style.display = "block"
+            document.querySelector(`.tabs button[onclick="openTab('${id}')"]`)?.classList.add("active")
+        }
+
+        function atualizarAbasImportacao() {
+            let importado = dados.length > 0
+            document.querySelectorAll('[data-requer-importacao]').forEach(b => {
+                b.disabled = !importado
+                b.title = importado ? "" : "Importe e confirme um CSV antes de acessar esta aba"
+            })
+        }
+
+        function mostrarLog(mensagem) {
+            log.innerHTML = mensagem
+            log.hidden = !mensagem.trim()
+        }
+
+        function limparLog() {
+            mostrarLog("")
+        }
+
+        function escaparHTML(valor) {
+            return String(valor)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;")
+        }
+
+        // IMPORT
+        fileInput.addEventListener('change', e => {
+            if (!e.target.files[0]) return
+            processarCSV(e.target.files[0], "Arquivo selecionado")
+        })
+
+        function processarCSV(arquivoOuTexto, origem, confirmarAutomaticamente = false) {
+            if (!confirmarAutomaticamente) {
+                dados = []
+                atualizarAbasImportacao()
+                limparLog()
+                openTab("import")
+            }
+
+            Papa.parse(arquivoOuTexto, {
+                header: true,
+                skipEmptyLines: true,
+
+                complete: r => {
+
+                    dadosTemp = []
+                    let erros = []
+
+                    r.data.forEach((row, i) => {
+
+                        try {
+
+                            if (!row.nome || !row.disciplina) {
+                                throw "Campos obrigatórios faltando"
+                            }
+
+                            let faltas = parseInt(row.faltas)
+                            if (isNaN(faltas)) {
+                                throw "Faltas inválidas"
+                            }
+
+                            let perc = parseFloat(
+                                (row.percentual_faltas || "0")
+                                    .replace("%", "")
+                                    .replace(",", ".")
+                            ) / 100
+
+                            dadosTemp.push({
+                                nome: row.nome.trim(),
+                                disciplina: row.disciplina.trim(),
+                                data: row.data?.trim() || "",
+                                aula: parseInt(row.aula) || 0,
+                                faltas: faltas,
+                                carga_horaria: parseFloat(row.carga_horaria) || 0,
+                                perc: perc,
+                                situacao: row.situacao || ""
+                            })
+
+                        } catch (e) {
+                            erros.push(`Linha ${i + 2}: ${e}`)
+                        }
+
+                    })
+
+                    let linhasPreview = dadosTemp.slice(0, 10)
+                        .map(d => `
+<tr>
+    <td>${escaparHTML(d.nome)}</td>
+    <td>${escaparHTML(d.disciplina)}</td>
+    <td>${escaparHTML(d.data || "-")}</td>
+    <td>${d.faltas}</td>
+    <td>${(d.perc * 100).toFixed(1)}%</td>
+</tr>
+`).join("")
+
+                    preview.innerHTML = `
+<div class="preview-card">
+    <h3>Prévia dos dados</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Aluno</th>
+                <th>Disciplina</th>
+                <th>Data</th>
+                <th>Faltas</th>
+                <th>% faltas</th>
+            </tr>
+        </thead>
+        <tbody>${linhasPreview}</tbody>
+    </table>
+</div>
+`
+
+                    if (confirmarAutomaticamente) {
+                        dados = dadosTemp
+                        atualizarAbasImportacao()
+                    }
+
+                    mostrarLog(`
+Origem: ${origem}<br>
+Linhas válidas: ${dadosTemp.length}<br>
+Erros: ${erros.length}<br>
+Status: ${confirmarAutomaticamente ? "carregado e confirmado automaticamente" : "pré-visualizado, clique em Confirmar importação"}<br><br>
+${erros.join("<br>")}
+`)
+
+                    popularDisciplinas()
+                }
+            })
+        }
+
+        function confirmarImportacao() {
+            if (dadosTemp.length === 0) {
+                alert("Selecione e carregue um CSV válido antes de confirmar.")
+                return
+            }
+
+            dados = dadosTemp
+            atualizarAbasImportacao()
+            alert("Carregado!")
+        }
+
+        // ALUNOS
+        function buscarAluno() {
+            let t = buscaAluno.value.toLowerCase()
+            let nomes = [...new Set(dados.filter(d => d.nome.toLowerCase().includes(t)).map(d => d.nome))]
+
+            listaAlunos.innerHTML = nomes.map(n => `
+<div class="card aluno-card" onclick="selAluno(this,'${n}')">
+    <b>${n}</b>
+    <span class="aluno-total">(${totalFaltasAluno(n)} aulas)</span>
+</div>
+`).join("")
+        }
+
+        function totalFaltasAluno(nome) {
+            return dados
+                .filter(d => d.nome == nome)
+                .reduce((total, d) => total + d.faltas, 0)
+        }
+
+        function selAluno(el, nome) {
+
+            document.querySelectorAll('#listaAlunos .card').forEach(c => c.classList.remove('selected'))
+            el.classList.add('selected')
+
+            let f = dados.filter(d => d.nome == nome)
+
+            if (f.length === 0) {
+                resAluno.innerHTML = "Aluno não encontrado"
+                return
+            }
+
+            // ================= AUX =================
+            function parseData(data) {
+                if (!data) return null
+
+                let partes = data.split("/")
+                if (partes.length !== 3) return null
+
+                let [dia, mes, ano] = partes.map(n => parseInt(n))
+                let date = new Date(ano, mes - 1, dia)
+
+                return isNaN(date.getTime()) ? null : date
+            }
+
+            function formatarData(date) {
+                return date ? date.toLocaleDateString("pt-BR") : "-"
+            }
+
+            function formatarDataCurta(date) {
+                return date ? date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "-"
+            }
+
+            function getMes(data) {
+                let date = parseData(data)
+                if (!date) return "-"
+
+                let mes = date.toLocaleDateString("pt-BR", { month: "long" })
+                return mes.charAt(0).toUpperCase() + mes.slice(1)
+            }
+
+            function getSemanaIntervalo(data) {
+                let date = parseData(data)
+                if (!date) return "-"
+
+                let inicio = new Date(date)
+                let diaSemana = inicio.getDay()
+                let deslocamento = diaSemana === 0 ? -6 : 1 - diaSemana
+                inicio.setDate(inicio.getDate() + deslocamento)
+
+                let fim = new Date(inicio)
+                fim.setDate(inicio.getDate() + 4)
+
+                return `de ${formatarDataCurta(inicio)} até ${formatarDataCurta(fim)}`
+            }
+
+            function getDiaSemana(data) {
+                let date = parseData(data)
+                return date ? date.getDay() : null // 0 = domingo
+            }
+
+            const diasSemanaNome = [
+                "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"
+            ]
+
+            // ================= ANÁLISES =================
+
+            let ultimoPresente = null
+            let ultimoFalta = null
+
+            let faltasPorDia = {}
+            let faltasPorMes = {}
+            let faltasPorSemana = {}
+            let faltasPorDiaSemana = {}
+            let disciplinasAluno = new Set(f.map(d => d.disciplina))
+            let faltasAlunoPorAula = new Set()
+
+            f.forEach(d => {
+                if (d.data && d.faltas > 0) {
+                    faltasAlunoPorAula.add(`${d.disciplina}|${d.data}`)
+                }
+            })
+
+            f.forEach(d => {
+
+                if (!d.data) return
+
+                let dataObj = parseData(d.data)
+                if (!dataObj) return
+
+                let situacao = (d.situacao || "")
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                let presente = d.faltas === 0 || situacao.includes("presente") || situacao.includes("presenca")
+
+                if (presente) {
+                    if (!ultimoPresente || dataObj > ultimoPresente) {
+                        ultimoPresente = dataObj
+                    }
+                }
+
+                if (d.faltas > 0) {
+
+                    if (!ultimoFalta || dataObj > ultimoFalta) {
+                        ultimoFalta = dataObj
+                    }
+
+                    // dia
+                    faltasPorDia[d.data] = (faltasPorDia[d.data] || 0) + d.faltas
+
+                    // mes
+                    let mes = getMes(d.data)
+                    faltasPorMes[mes] = (faltasPorMes[mes] || 0) + d.faltas
+
+                    // semana
+                    let semana = getSemanaIntervalo(d.data)
+                    faltasPorSemana[semana] = (faltasPorSemana[semana] || 0) + d.faltas
+
+                    // dia da semana
+                    let ds = getDiaSemana(d.data)
+                    if (ds !== null) {
+                        faltasPorDiaSemana[ds] = (faltasPorDiaSemana[ds] || 0) + d.faltas
+                    }
+                }
+            })
+
+            dados.forEach(d => {
+                if (!d.data || !disciplinasAluno.has(d.disciplina)) return
+
+                let dataObj = parseData(d.data)
+                if (!dataObj) return
+
+                let chaveAula = `${d.disciplina}|${d.data}`
+                let alunoNaoTeveFaltaNestaAula = !faltasAlunoPorAula.has(chaveAula)
+
+                if (alunoNaoTeveFaltaNestaAula && (!ultimoPresente || dataObj > ultimoPresente)) {
+                    ultimoPresente = dataObj
+                }
+            })
+
+            // helpers ranking
+            function top(mapa) {
+                let arr = Object.entries(mapa)
+                if (arr.length === 0) return "-"
+                return arr.sort((a, b) => b[1] - a[1])[0][0]
+            }
+
+            // ================= RESULTADOS =================
+
+            let diaSemanaTop = top(faltasPorDiaSemana)
+            diaSemanaTop = diaSemanaTop !== "-" ? diasSemanaNome[diaSemanaTop] : "-"
+
+            // ================= HTML =================
+
+            let html = `<div class="card"><b>${nome}</b><br>Total de faltas: ${totalFaltasAluno(nome)} aulas</div>`
+
+            html += `
+<div class="card">
+<b>Resumo:</b><br>
+Último dia presente: ${formatarData(ultimoPresente)}<br>
+Último dia com falta: ${formatarData(ultimoFalta)}<br>
+Dia que mais faltou: ${top(faltasPorDia)}<br>
+Mês que mais faltou: ${top(faltasPorMes)}<br>
+Semana que mais faltou: ${top(faltasPorSemana)}<br>
+Dia da semana que mais falta: ${diaSemanaTop}
+</div>
+`
+
+            // ================= DISCIPLINAS =================
+
+            let por = {}
+
+            f.forEach(d => {
+                if (!por[d.disciplina]) por[d.disciplina] = []
+                if (d.faltas > 0) por[d.disciplina].push(d)
+            })
+
+            Object.entries(por).forEach(([disc, arr]) => {
+                html += `<div class="card"><b>${disc}</b>`
+                arr.forEach(d => html += `<div>${d.data} (${d.faltas})</div>`)
+                html += `</div>`
+            })
+
+            resAluno.innerHTML = html
+        }
+
+        // DISCIPLINAS
+        function popularDisciplinas() {
+            const fonte = dadosTemp.length ? dadosTemp : dados
+            let u = [...new Set(fonte.map(d => d.disciplina))]
+                .sort((a, b) => a.localeCompare(b, "pt-BR"))
+            selectDisciplinas.innerHTML = `
+<option value="__todas__">Todas as disciplinas</option>
+${u.map(d => `<option>${d}</option>`).join("")}
+`
+        }
+
+        function analisarDisciplinas() {
+
+            let sel = [...selectDisciplinas.selectedOptions].map(o => o.value)
+            let todasSelecionadas = sel.includes("__todas__")
+            let f = dados.filter(d => todasSelecionadas || sel.length == 0 || sel.includes(d.disciplina))
+
+            let por = {}
+
+            f.forEach(d => {
+                let grupo = todasSelecionadas ? "Todas as disciplinas" : d.disciplina
+
+                if (!por[grupo]) por[grupo] = { alunos: {}, dias: {} }
+                por[grupo].alunos[d.nome] = (por[grupo].alunos[d.nome] || 0) + d.faltas
+                por[grupo].dias[d.data] = (por[grupo].dias[d.data] || 0) + d.faltas
+            })
+
+            let html = ""
+
+            Object.entries(por).forEach(([disc, info], i) => {
+
+                let alunos = Object.entries(info.alunos).sort((a, b) => b[1] - a[1])
+                let dias = Object.entries(info.dias).sort((a, b) => a[0].localeCompare(b[0]))
+
+                html += `
+<div class="card">
+<h3>${disc}</h3>
+<div>Mais falta: ${alunos[0]?.[0]}</div>
+<div>Menos falta: ${alunos.at(-1)?.[0]}</div>
+
+<h4>Top 10</h4>
+${alunos.slice(0, 10).map(a => `${a[0]} (${a[1]})`).join("<br>")}
+
+<canvas id="c${i}"></canvas>
+<div class="heatmap" id="h${i}"></div>
+</div>
+`
+            })
+
+            resDisciplinas.innerHTML = html
+
+            Object.entries(por).forEach(([disc, info], i) => {
+
+                let dias = Object.entries(info.dias).sort((a, b) => a[0].localeCompare(b[0]))
+
+                new Chart(document.getElementById(`c${i}`), {
+                    type: 'line',
+                    data: {
+                        labels: dias.map(d => d[0]),
+                        datasets: [{ label: disc, data: dias.map(d => d[1]) }]
+                    }
+                })
+
+                let h = document.getElementById(`h${i}`)
+                dias.forEach(d => {
+                    let v = d[1]
+                    let cor = v < 3 ? "#a5d6a7" : v < 6 ? "#66bb6a" : "#1b5e20"
+                    let b = document.createElement("div")
+                    b.className = "box"
+                    b.style.background = cor
+                    h.appendChild(b)
+                })
+
+            })
+
+        }
+
+        // RISCO
+        function getClasse(p) {
+            if (p >= 0.6) return "risco-critico"
+            if (p >= 0.4) return "risco-alto"
+            return "risco-leve"
+        }
+
+        function calcularRisco(filtro = null) {
+
+            document.querySelectorAll('.risco-legenda .card').forEach(c => {
+                c.classList.toggle('selected', filtro && c.dataset.risco === filtro)
+            })
+
+            let mapa = {}
+
+            dados.forEach(d => {
+                if (!d.carga_horaria) return
+
+                let k = d.nome + "|" + d.disciplina
+
+                if (!mapa[k]) mapa[k] = { nome: d.nome, disc: d.disciplina, faltas: 0, carga: d.carga_horaria }
+
+                mapa[k].faltas += d.faltas
+            })
+
+            let alunos = {}
+
+            Object.values(mapa).forEach(r => {
+                let p = r.perc || (r.faltas / r.carga)
+
+                if (p > 0.25) {
+                    if (!alunos[r.nome]) alunos[r.nome] = []
+                    alunos[r.nome].push({ ...r, perc: p })
+                }
+            })
+
+            let ranking = Object.entries(alunos)
+                .map(([n, d]) => ({
+                    nome: n,
+                    ds: d,
+                    q: d.length,
+                    s: d.reduce((a, b) => a + b.perc, 0),
+                    maiorRisco: Math.max(...d.map(item => item.perc))
+                }))
+                .filter(a => !filtro || getClasse(a.maiorRisco) === filtro)
+                .sort((a, b) => b.q - a.q || b.s - a.s)
+
+            resRisco.innerHTML = ranking.map((a, i) => {
+                let m = a.maiorRisco
+                return `<div class="card ${getClasse(m)}" onclick="det('${a.nome}')">
+<b>${i + 1}. ${a.nome}</b><br>${a.q} disciplinas<br>${(m * 100).toFixed(1)}%
+</div>`
+            }).join("") || (filtro ? "Nenhum aluno nesta faixa" : "Nenhum em risco")
+        }
+
+        function det(nome) {
+
+            let html = `<div class="card"><b>${nome}</b></div>`
+
+            let por = {}
+
+            dados.filter(d => d.nome == nome).forEach(d => {
+                if (!d.carga_horaria) return
+                if (!por[d.disciplina]) por[d.disciplina] = { f: 0, c: d.carga_horaria }
+                por[d.disciplina].f += d.faltas
+            })
+
+            Object.entries(por).forEach(([disc, info]) => {
+                let p = info.f / info.c
+                if (p > 0.25) {
+                    html += `<div class="card ${getClasse(p)}">
+${disc}<br>${(p * 100).toFixed(1)}% (${info.f}/${info.c} aulas)
+</div>`
+                }
+            })
+
+            resRisco.innerHTML = html
+        }
+
+        function gerarEstatisticas() {
+
+            if (dados.length === 0) {
+                alert("Carregue os dados primeiro")
+                return
+            }
+
+            let container = document.getElementById("areaEstatisticas")
+
+            // limpa tudo antes de renderizar
+            container.innerHTML = ""
+
+            // ================= DISCIPLINAS =================
+            let porDisc = {}
+
+            dados.forEach(d => {
+                porDisc[d.disciplina] = (porDisc[d.disciplina] || 0) + d.faltas
+            })
+
+            let labelsDisc = Object.keys(porDisc)
+            let valoresDisc = Object.values(porDisc)
+
+            // bloco 1
+            let bloco1 = document.createElement("div")
+            bloco1.className = "card"
+
+            bloco1.innerHTML = `
+<h3>Faltas por Disciplina</h3>
+<canvas id="grafDisc"></canvas>
+`
+
+            container.appendChild(bloco1)
+
+            new Chart(document.getElementById("grafDisc"), {
+                type: 'bar',
+                data: {
+                    labels: labelsDisc,
+                    datasets: [{
+                        label: 'Faltas',
+                        data: valoresDisc
+                    }]
+                }
+            })
+
+
+            // ================= RANKING =================
+            let ordenado = Object.entries(porDisc).sort((a, b) => b[1] - a[1])
+
+            let top = ordenado.slice(0, 5)
+            let bottom = ordenado.slice(-5)
+
+            let labelsRank = [...top.map(d => d[0]), ...bottom.map(d => d[0])]
+            let valoresRank = [...top.map(d => d[1]), ...bottom.map(d => d[1])]
+
+            // bloco 2
+            let bloco2 = document.createElement("div")
+            bloco2.className = "card"
+
+            bloco2.innerHTML = `
+<h3>Top Disciplinas (Mais vs Menos)</h3>
+<canvas id="grafRanking"></canvas>
+`
+
+            container.appendChild(bloco2)
+
+            new Chart(document.getElementById("grafRanking"), {
+                type: 'bar',
+                data: {
+                    labels: labelsRank,
+                    datasets: [{
+                        label: 'Ranking',
+                        data: valoresRank
+                    }]
+                }
+            })
+
+
+            // ================= DIA DA SEMANA =================
+
+            let dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"]
+            let porSemana = Array(7).fill(0)
+
+            dados.forEach(d => {
+
+                if (!d.data) return
+
+                let [dia, mes, ano] = d.data.split("/")
+                let date = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia))
+
+                let ds = date.getDay()
+
+                // ignora fim de semana (opcional)
+                if (ds === 0 || ds === 6) return
+
+                porSemana[ds] += d.faltas
+            })
+
+            // bloco 3
+            let bloco3 = document.createElement("div")
+            bloco3.className = "card"
+
+            bloco3.innerHTML = `
+<h3>Faltas por Dia da Semana</h3>
+<canvas id="grafSemana"></canvas>
+`
+
+            container.appendChild(bloco3)
+
+            new Chart(document.getElementById("grafSemana"), {
+                type: 'bar',
+                data: {
+                    labels: dias,
+                    datasets: [{
+                        label: 'Faltas',
+                        data: porSemana
+                    }]
+                }
+            })
+
+        }
+
+    </script>
+</body>
+
+</html>
