@@ -436,6 +436,7 @@
         <div class="login-card">
             <h1>Acesso restrito</h1>
             <p>Entre com uma conta Google institucional terminada em <b>@ifc.edu.br</b>.</p>
+            <p style="font-size:0.9em; color:#666; margin-top:0.5rem;">Se estiver testando localmente, autorize <b>http://localhost:5000</b> ou <b>http://127.0.0.1:5000</b> em Authorized JavaScript origins no Google Cloud Console.</p>
             <div id="googleLoginButton"></div>
             <div id="loginError" class="login-error" hidden></div>
         </div>
@@ -460,7 +461,7 @@
     <div id="import" class="tab" style="display:block">
         <h2>Importar CSV</h2>
         <div class="help">
-            <b>Como usar:</b> os dados são carregados automaticamente de <b>faltas.sqlite</b> ao abrir a página. Se desejar, selecione um arquivo CSV para sobrescrever os dados carregados, confira a prévia e clique em <b>Confirmar importação</b>.
+            <b>Como usar:</b> os dados são carregados automaticamente do Supabase ao abrir a página. Se desejar, selecione um arquivo CSV para sobrescrever os dados no Supabase, confira a prévia e clique em <b>Confirmar importação</b>.
         </div>
         <div class="toolbar">
             <input type="file" id="fileInput" accept=".csv">
@@ -543,6 +544,36 @@
 
         let dados = [], dadosTemp = []
         let usuarioAutenticado = null
+
+        function escaparHTML(text) {
+            if (text == null) return ""
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;")
+        }
+
+        function mostrarLog(mensagem) {
+            const log = document.getElementById('log')
+            if (!log) return
+            log.innerHTML = mensagem
+            log.hidden = false
+        }
+
+        function limparLog() {
+            const log = document.getElementById('log')
+            if (!log) return
+            log.innerHTML = ''
+            log.hidden = true
+        }
+
+        function atualizarAbasImportacao() {
+            document.querySelectorAll('[data-requer-importacao]').forEach(btn => {
+                btn.disabled = dados.length === 0
+            })
+        }
 
         window.addEventListener("load", iniciarLogin)
         window.addEventListener("load", carregarDadosSQLite)
@@ -694,59 +725,58 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
             document.querySelector(`.tabs button[onclick="openTab('${id}')"]`)?.classList.add("active")
         }
 
-        function atualizarAbasImportacao() {
-            let importado = dados.length > 0
-            document.querySelectorAll('[data-requer-importacao]').forEach(b => {
-                b.disabled = !importado
-                b.title = importado ? "" : "Importe e confirme um CSV antes de acessar esta aba"
-            })
-        }
+        async function carregarDadosSQLite() {
+            try {
+                const resposta = await fetch('/api/supabase')
+                if (!resposta.ok) {
+                    throw new Error(`API Supabase não disponível: ${resposta.status} ${resposta.statusText}`)
+                }
 
-        function mostrarLog(mensagem) {
-            log.innerHTML = mensagem
-            log.hidden = !mensagem.trim()
-        }
+                const j = await resposta.json()
 
-        function limparLog() {
-            mostrarLog("")
-        }
+                if (!j.columns || !j.rows) {
+                    throw new Error("Resposta da API não contém colunas ou linhas.")
+                }
 
-        function escaparHTML(valor) {
-            return String(valor)
-                .replaceAll("&", "&amp;")
-                .replaceAll("<", "&lt;")
-                .replaceAll(">", "&gt;")
-                .replaceAll('"', "&quot;")
-                .replaceAll("'", "&#039;")
-        }
+                const colunas = j.columns
+                dados = j.rows.map(linha => {
+                    const registro = {}
+                    colunas.forEach((coluna, indice) => registro[coluna] = linha[indice])
 
-        // IMPORT
-        fileInput.addEventListener('change', e => {
-            if (!e.target.files[0]) return
-            processarCSV(e.target.files[0], "Arquivo selecionado")
-        })
+                    const percentual = parseFloat(String(registro.percentual_faltas || "").replace("%", "").replace(",", "."))
+
+                    return {
+                        nome: String(registro.nome || "").trim(),
+                        disciplina: String(registro.disciplina || "").trim(),
+                        data: String(registro.data || "").trim(),
+                        aula: parseInt(registro.aula) || 0,
+                        faltas: parseInt(registro.faltas) || 0,
+                        carga_horaria: parseFloat(registro.carga_horaria) || 0,
+                        perc: isNaN(percentual) ? 0 : percentual / 100,
+                        situacao: String(registro.situacao || "")
+                    }
+                })
+
+                dadosTemp = dados.slice()
+                atualizarAbasImportacao()
+                popularDisciplinas()
+                mostrarLog(`Dados carregados automaticamente via Supabase. Linhas carregadas: ${dados.length}. Para sobrescrever, selecione um CSV e confirme.`)
+
+            } catch (erro) {
+                mostrarLog(`Não foi possível carregar dados via Supabase. Importe um CSV para sobrescrever.<br><br>${escaparHTML(erro.message || String(erro))}`)
+            }
+        }
 
         function processarCSV(arquivoOuTexto, origem, confirmarAutomaticamente = false) {
-            if (!confirmarAutomaticamente) {
-                dados = []
-                atualizarAbasImportacao()
-                limparLog()
-                openTab("import")
-            }
-
             Papa.parse(arquivoOuTexto, {
                 header: true,
                 skipEmptyLines: true,
-
                 complete: r => {
-
                     dadosTemp = []
                     let erros = []
 
                     r.data.forEach((row, i) => {
-
                         try {
-
                             if (!row.nome || !row.disciplina) {
                                 throw "Campos obrigatórios faltando"
                             }
@@ -776,66 +806,106 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                         } catch (e) {
                             erros.push(`Linha ${i + 2}: ${e}`)
                         }
-
                     })
 
                     let linhasPreview = dadosTemp.slice(0, 10)
-                        .map(d => `
-<tr>
-    <td>${escaparHTML(d.nome)}</td>
-    <td>${escaparHTML(d.disciplina)}</td>
-    <td>${escaparHTML(d.data || "-")}</td>
-    <td>${d.faltas}</td>
-    <td>${(d.perc * 100).toFixed(1)}%</td>
-</tr>
-`).join("")
+                        .map(d => `\n<tr>\n    <td>${escaparHTML(d.nome)}</td>\n    <td>${escaparHTML(d.disciplina)}</td>\n    <td>${escaparHTML(d.data || "-")}</td>\n    <td>${d.faltas}</td>\n    <td>${(d.perc * 100).toFixed(1)}%</td>\n</tr>\n`).join("")
 
-                    preview.innerHTML = `
-<div class="preview-card">
-    <h3>Prévia dos dados</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Aluno</th>
-                <th>Disciplina</th>
-                <th>Data</th>
-                <th>Faltas</th>
-                <th>% faltas</th>
-            </tr>
-        </thead>
-        <tbody>${linhasPreview}</tbody>
-    </table>
-</div>
-`
+                    preview.innerHTML = `\n<div class="preview-card">\n    <h3>Prévia dos dados</h3>\n    <table>\n        <thead>\n            <tr>\n                <th>Aluno</th>\n                <th>Disciplina</th>\n                <th>Data</th>\n                <th>Faltas</th>\n                <th>% faltas</th>\n            </tr>\n        </thead>\n        <tbody>${linhasPreview}</tbody>\n    </table>\n</div>\n`
 
                     if (confirmarAutomaticamente) {
                         dados = dadosTemp
                         atualizarAbasImportacao()
                     }
 
-                    mostrarLog(`
-Origem: ${origem}<br>
-Linhas válidas: ${dadosTemp.length}<br>
-Erros: ${erros.length}<br>
-Status: ${confirmarAutomaticamente ? "carregado e confirmado automaticamente" : "pré-visualizado, clique em Confirmar importação"}<br><br>
-${erros.join("<br>")}
-`)
-
+                    mostrarLog(`Origem: ${origem}<br>Linhas válidas: ${dadosTemp.length}<br>Erros: ${erros.length}<br>Status: ${confirmarAutomaticamente ? "carregado e confirmado automaticamente" : "pré-visualizado, clique em Confirmar importação"}<br><br>${erros.join("<br>")}`)
                     popularDisciplinas()
                 }
             })
         }
 
         function confirmarImportacao() {
-            if (dadosTemp.length === 0) {
-                alert("Selecione e carregue um CSV válido antes de confirmar.")
+            if (!fileInput.files[0]) {
+                alert("Selecione um CSV antes de confirmar.")
                 return
             }
 
-            dados = dadosTemp
-            atualizarAbasImportacao()
-            alert("Carregado!")
+            if (!confirm('Deseja sobrescrever os dados no Supabase com este CSV?')) return
+
+            const fd = new FormData()
+            fd.append('file', fileInput.files[0])
+
+            fetch('/api/upload_csv', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(j => {
+                    if (j.status === 'ok') {
+                        mostrarLog(`Upload concluído. Registros inseridos: ${j.inserted}`)
+                        carregarDadosSQLite()
+                        alert('Upload e importação concluídos: ' + j.inserted + ' registros')
+                    } else {
+                        alert('Erro na importação: ' + JSON.stringify(j))
+                    }
+                })
+                .catch(e => alert('Falha ao enviar CSV: ' + e))
         }
+
+        function previewCSV(file) {
+            if (!file) return
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: r => {
+                    dadosTemp = []
+                    let erros = []
+
+                    r.data.forEach((row, i) => {
+                        try {
+                            if (!row.nome || !row.disciplina) {
+                                throw "Campos obrigatórios faltando"
+                            }
+
+                            let faltas = parseInt(row.faltas)
+                            if (isNaN(faltas)) {
+                                throw "Faltas inválidas"
+                            }
+
+                            let perc = parseFloat(
+                                (row.percentual_faltas || "0")
+                                    .replace("%", "")
+                                    .replace(",", ".")
+                            ) / 100
+
+                            dadosTemp.push({
+                                nome: row.nome.trim(),
+                                disciplina: row.disciplina.trim(),
+                                data: row.data?.trim() || "",
+                                aula: parseInt(row.aula) || 0,
+                                faltas: faltas,
+                                carga_horaria: parseFloat(row.carga_horaria) || 0,
+                                perc: perc,
+                                situacao: row.situacao || ""
+                            })
+
+                        } catch (e) {
+                            erros.push(`Linha ${i + 2}: ${e}`)
+                        }
+                    })
+
+                    let linhasPreview = dadosTemp.slice(0, 10)
+                        .map(d => `\n<tr>\n    <td>${escaparHTML(d.nome)}</td>\n    <td>${escaparHTML(d.disciplina)}</td>\n    <td>${escaparHTML(d.data || "-")}</td>\n    <td>${d.faltas}</td>\n    <td>${(d.perc * 100).toFixed(1)}%</td>\n</tr>\n`).join("")
+
+                    preview.innerHTML = `\n<div class="preview-card">\n    <h3>Prévia dos dados</h3>\n    <table>\n        <thead>\n            <tr>\n                <th>Aluno</th>\n                <th>Disciplina</th>\n                <th>Data</th>\n                <th>Faltas</th>\n                <th>% faltas</th>\n            </tr>\n        </thead>\n        <tbody>${linhasPreview}</tbody>\n    </table>\n</div>\n`
+
+                    mostrarLog(`Origem: Arquivo selecionado<br>Linhas válidas: ${dadosTemp.length}<br>Erros: ${erros.length}<br>Status: pré-visualizado, clique em Confirmar importação<br><br>${erros.join("<br>")}`)
+                    popularDisciplinas()
+                }
+            })
+        }
+
+        document.getElementById('fileInput').addEventListener('change', e => {
+            if (!e.target.files[0]) return
+            previewCSV(e.target.files[0])
+        })
 
         // ALUNOS
         function buscarAluno() {
