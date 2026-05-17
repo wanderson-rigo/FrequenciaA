@@ -91,26 +91,37 @@ def api_supabase():
     headers = {
         'apikey': SUPABASE_KEY,
         'Authorization': f'Bearer {SUPABASE_KEY}',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Range-Unit': 'items'
     }
 
     params = {'select': '*'}
+    per_page = 1000
+    start = 0
+    all_rows = []
 
     try:
-        r = requests.get(url, headers=headers, params=params, timeout=10)
-        r.raise_for_status()
+        while True:
+            headers['Range'] = f"{start}-{start + per_page - 1}"
+            r = requests.get(url, headers=headers, params=params, timeout=20)
+            if r.status_code not in (200, 206):
+                return jsonify({'error': 'Falha ao consultar Supabase', 'status': r.status_code, 'detail': r.text}), 502
+
+            page_data = r.json()
+            if not isinstance(page_data, list):
+                return jsonify({'error': 'Resposta inesperada da Supabase', 'data': page_data}), 502
+
+            all_rows.extend(page_data)
+            if len(page_data) < per_page:
+                break
+            start += per_page
+
     except Exception as e:
         return jsonify({'error': 'Falha ao consultar Supabase', 'detail': str(e)}), 502
 
-    data = r.json()
-
-    if not isinstance(data, list):
-        return jsonify({'error': 'Resposta inesperada da Supabase', 'data': data}), 502
-
-    # columns are keys of first row
-    if data:
-        cols = list(data[0].keys())
-        rows = [[row.get(c) for c in cols] for row in data]
+    if all_rows:
+        cols = list(all_rows[0].keys())
+        rows = [[row.get(c) for c in cols] for row in all_rows]
     else:
         cols = []
         rows = []
