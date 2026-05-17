@@ -7,3 +7,6 @@
 saida/faltas.sqlite
 saida/faltas.csv
 .gitignore
+tmp_debug_extraction.py
+__pycache__/ExtrairFaltasDosPDFs.cpython-314.pyc
+.gitignore

@@ -6,7 +6,7 @@ Basta editar os nomes dos alunos de interesse no arquivo nomes/alunos.txt
 
 O arquivo CSV gerado pode ser manipulado de forma independente para geração de estatíticas, por exemplo.
 
-Para explorar os dados gerados clique [aqui](saida/index.html)
+Para explorar os dados gerados clique [aqui](https://frequenciaa.onrender.com)
 
 ## Deploy no Render
 
