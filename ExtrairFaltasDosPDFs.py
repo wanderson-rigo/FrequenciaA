@@ -2,13 +2,15 @@ import csv
 import glob
 import os
 import re
-import sqlite3
 import pdfplumber
+import requests
 from datetime import datetime
 
 PASTA_PDFS = "./pdfs"  # Defina a pasta onde estão os arquivos PDFs
 CSV_FINAL_PATH = "./saida/faltas.csv"
-SQLITE_FINAL_PATH = "./saida/faltas.sqlite"
+
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
 
 
 def extrair_datas_reais_cabecalho(tabela):
@@ -244,30 +246,57 @@ def extrair_dados_de_um_pdf(pdf_path):
     return linhas_deste_pdf
 
 
-def salvar_faltas_sqlite(dados, colunas, sqlite_path):
-    os.makedirs(os.path.dirname(sqlite_path), exist_ok=True)
+def salvar_faltas_supabase(dados, colunas):
+    """Envia os dados extraídos para a tabela 'faltas' do Supabase."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        print("ERRO: SUPABASE_URL ou SUPABASE_KEY não definidos no ambiente.")
+        return False
 
-    tipos_sql = {
-        "aula": "INTEGER",
-        "faltas": "INTEGER",
-        "total_faltas_pdf": "INTEGER",
-        "carga_horaria": "INTEGER",
-        "aulas_ministradas": "INTEGER",
+    table = 'faltas'
+    base_url = SUPABASE_URL.rstrip('/') + f'/rest/v1/{table}'
+    headers = {
+        'apikey': SUPABASE_KEY,
+        'Authorization': f'Bearer {SUPABASE_KEY}',
+        'Content-Type': 'application/json'
     }
-    definicoes_colunas = [
-        f"{coluna} {tipos_sql.get(coluna, 'TEXT')}" for coluna in colunas
-    ]
-    placeholders = ", ".join(["?"] * len(colunas))
 
-    with sqlite3.connect(sqlite_path) as conexao:
-        cursor = conexao.cursor()
-        cursor.execute("DROP TABLE IF EXISTS faltas")
-        cursor.execute(f"CREATE TABLE faltas ({', '.join(definicoes_colunas)})")
-        cursor.executemany(
-            f"INSERT INTO faltas ({', '.join(colunas)}) VALUES ({placeholders})",
-            [[linha.get(coluna, "") for coluna in colunas] for linha in dados],
+    # Limpar tabela
+    try:
+        print(f"Limpando tabela '{table}' no Supabase...")
+        r_delete = requests.delete(
+            base_url,
+            headers={**headers, 'Prefer': 'return=representation'},
+            timeout=20
         )
-        conexao.commit()
+        if r_delete.status_code not in (200, 204):
+            print(f"ERRO ao limpar: {r_delete.status_code} - {r_delete.text}")
+            return False
+    except Exception as e:
+        print(f"ERRO ao limpar tabela: {e}")
+        return False
+
+    # Inserir em lotes
+    batch_size = 200
+    inserted = 0
+    try:
+        for i in range(0, len(dados), batch_size):
+            batch = dados[i:i+batch_size]
+            print(f"Inserindo lote {i//batch_size + 1} ({len(batch)} registros)...")
+            r_insert = requests.post(
+                base_url,
+                headers={**headers, 'Prefer': 'resolution=merge-duplicates'},
+                json=batch,
+                timeout=30
+            )
+            if r_insert.status_code not in (200, 201):
+                print(f"ERRO ao inserir lote: {r_insert.status_code} - {r_insert.text}")
+                return False
+            inserted += len(batch)
+        print(f"OK {inserted} registros inseridos com sucesso no Supabase!")
+        return True
+    except Exception as e:
+        print(f"ERRO ao inserir dados: {e}")
+        return False
 
 
 # --- PROCESSO DE EXECUÇÃO ---
@@ -311,10 +340,10 @@ else:
         writer.writeheader()
         writer.writerows(all_data)
 
-    salvar_faltas_sqlite(all_data, colunas, SQLITE_FINAL_PATH)
+    salvar_faltas_supabase(all_data, colunas)
 
     print("\n" + "=" * 60)
     print(f"Filtro concluído! Arquivo gerado: '{CSV_FINAL_PATH}'")
-    print(f"Banco SQLite gerado: '{SQLITE_FINAL_PATH}' (tabela: faltas)")
+    print(f"Dados enviados para Supabase (tabela: faltas)")
     print(f"Total de registros de faltas (> 0) salvos: {len(all_data)} linhas.")
     print("=" * 60)
