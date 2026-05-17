@@ -3,3 +3,7 @@
 /nomes
 /pdfs
 /saidas
+.vscode/settings.json
+saida/faltas.sqlite
+saida/faltas.csv
+.gitignore
