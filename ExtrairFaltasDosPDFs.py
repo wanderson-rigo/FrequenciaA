@@ -276,43 +276,72 @@ def extrair_dados_de_um_pdf(pdf_path):
 
     return linhas_deste_pdf
 
+def remover_duplicados(dados):
+    print(f"\nRegistros antes deduplicação: {len(dados)}")
+
+    unico = {}
+    for d in dados:
+        chave = (
+            d["matricula"],
+            d["data"],
+            d["disciplina"],
+            d["aula"]
+        )
+
+        if chave not in unico or d["faltas"] > unico[chave]["faltas"]:
+            unico[chave] = d
+
+    resultado = list(unico.values())
+
+    print(f"Registros após deduplicação: {len(resultado)}")
+    print(f"Removidos: {len(dados) - len(resultado)} duplicados")
+
+    return resultado
 
 def limpar_tabela_supabase():
-    """Limpa a tabela 'faltas' no Supabase antes de reinserir os dados."""
     if not SUPABASE_URL or not SUPABASE_KEY:
         print("ERRO: SUPABASE_URL ou SUPABASE_KEY não definidos no ambiente.")
         return False
 
     table = 'faltas'
     base_url = SUPABASE_URL.rstrip('/') + f'/rest/v1/{table}'
+
     headers = {
         'apikey': SUPABASE_KEY,
         'Authorization': f'Bearer {SUPABASE_KEY}',
         'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        'Prefer': 'return=representation'
     }
 
     try:
         print(f"Limpando tabela '{table}' no Supabase...")
-        r_delete = requests.delete(base_url, headers=headers, timeout=30)
+
+        # garante delete real mesmo com filtros
+        r_delete = requests.delete(
+            base_url + "?matricula=neq.__never__",
+            headers=headers,
+            timeout=30
+        )
+
         if r_delete.status_code not in (200, 204):
             print(f"ERRO ao limpar tabela: {r_delete.status_code} - {r_delete.text}")
             return False
+
         print(f"✓ Tabela '{table}' limpa com sucesso no Supabase.")
         return True
+
     except Exception as e:
         print(f"ERRO ao limpar tabela: {e}")
         return False
 
 
 def salvar_faltas_supabase(dados, colunas):
-    """Envia os dados extraídos para a tabela 'faltas' do Supabase."""
     if not SUPABASE_URL or not SUPABASE_KEY:
         print("ERRO: SUPABASE_URL ou SUPABASE_KEY não definidos no ambiente.")
         return False
 
-    if not limpar_tabela_supabase():
-        return False
+    # 🔥 NOVO: remove duplicados antes
+    dados = remover_duplicados(dados)
 
     if not dados:
         print("Nenhum dado para inserir no Supabase.")
@@ -320,30 +349,39 @@ def salvar_faltas_supabase(dados, colunas):
 
     table = 'faltas'
     base_url = SUPABASE_URL.rstrip('/') + f'/rest/v1/{table}'
+
     headers = {
         'apikey': SUPABASE_KEY,
         'Authorization': f'Bearer {SUPABASE_KEY}',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'  # 🔥 UPSERT
     }
 
     batch_size = 200
     inserted = 0
+
     try:
         for i in range(0, len(dados), batch_size):
             batch = dados[i:i+batch_size]
+
             print(f"Inserindo lote {i//batch_size + 1} ({len(batch)} registros)...")
+
             r_insert = requests.post(
                 base_url,
                 headers=headers,
                 json=batch,
                 timeout=30
             )
+
             if r_insert.status_code not in (200, 201):
                 print(f"ERRO ao inserir lote: {r_insert.status_code} - {r_insert.text}")
                 return False
+
             inserted += len(batch)
-        print(f"✓ {inserted} registros inseridos com sucesso no Supabase!")
+
+        print(f"✓ {inserted} registros enviados (UPSERT) com sucesso!")
         return True
+
     except Exception as e:
         print(f"ERRO ao inserir dados: {e}")
         return False

@@ -158,6 +158,16 @@ def api_upload_csv():
         'Content-Type': 'application/json'
     }
 
+    # 1. Limpar a tabela antes de inserir os novos dados
+    # O PostgREST (Supabase) exige a presença de um filtro para comandos DELETE.
+    # Como o campo 'id' é a chave primária (bigserial), usamos 'id=gt.0' para atingir todos os registros.
+    try:
+        r_del = requests.delete(base + "?id=gt.0", headers=headers, timeout=30)
+        if r_del.status_code not in (200, 204):
+            return jsonify({'error': 'Falha ao limpar tabela antes do upload', 'status': r_del.status_code, 'detail': r_del.text}), 502
+    except Exception as e:
+        return jsonify({'error': 'Exceção ao limpar tabela', 'detail': str(e)}), 502
+
     # insert in batches (merge-duplicates handles updates automatically)
     batch_size = 200
     inserted = 0
