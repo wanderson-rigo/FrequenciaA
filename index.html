@@ -238,6 +238,28 @@
             color: var(--text);
         }
 
+        #autocompleteSuggestions {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 8px 8px;
+        }
+
+        #autocompleteSuggestions .suggestion {
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        #autocompleteSuggestions .suggestion:hover,
+        #autocompleteSuggestions .suggestion.selected {
+            background: #eff6ff;
+            color: var(--primary);
+        }
+
+        #autocompleteSuggestions .suggestion:last-child {
+            border-bottom: none;
+        }
+
         .disciplinas-toolbar {
             display: grid;
             gap: 10px;
@@ -475,10 +497,11 @@
     <div id="alunos" class="tab">
         <h2>Alunos</h2>
         <div class="help">
-            <b>Como usar:</b> digite parte do nome do aluno, clique em <b>Buscar</b> e depois clique no cartão do aluno para ver resumo, faltas e disciplinas.
+            <b>Como usar:</b> digite o nome do aluno (autocomplete ativa automaticamente), selecione uma sugestão ou clique em <b>Buscar</b> para ver cartões, depois clique no aluno para detalhar.
         </div>
-        <div class="toolbar">
-            <input id="buscaAluno" placeholder="Digite parte do nome do aluno">
+        <div class="toolbar" style="position: relative;">
+            <input id="buscaAluno" placeholder="Digite parte do nome do aluno" autocomplete="off">
+            <div id="autocompleteSuggestions" style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #ccc; border-top:none; max-height:300px; overflow-y:auto; z-index:1000;"></div>
             <button onclick="buscarAluno()">Buscar</button>
         </div>
         <div id="listaAlunos"></div>
@@ -577,6 +600,21 @@
 
         window.addEventListener("load", iniciarLogin)
         window.addEventListener("load", carregarDadosSQLite)
+        window.addEventListener("load", () => {
+            // Autocomplete no campo de busca de alunos
+            document.getElementById('buscaAluno').addEventListener('input', mostrarAutocompleteSuggestions)
+            document.getElementById('buscaAluno').addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    buscarAluno()
+                }
+            })
+            // Fechar autocomplete ao clicar fora
+            document.addEventListener('click', e => {
+                if (!e.target.closest('#buscaAluno') && !e.target.closest('#autocompleteSuggestions')) {
+                    document.getElementById('autocompleteSuggestions').style.display = 'none'
+                }
+            })
+        })
 
         async function carregarDadosSQLite() {
             try {
@@ -907,9 +945,43 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
             previewCSV(e.target.files[0])
         })
 
-        // ALUNOS
+        // ALUNOS com Autocomplete
+        function mostrarAutocompleteSuggestions() {
+            let t = buscaAluno.value.toLowerCase().trim()
+            let suggestionsDiv = document.getElementById('autocompleteSuggestions')
+            
+            if (!t || t.length < 1) {
+                suggestionsDiv.style.display = 'none'
+                suggestionsDiv.innerHTML = ''
+                return
+            }
+
+            let nomes = [...new Set(dados.filter(d => d.nome.toLowerCase().includes(t)).map(d => d.nome))]
+            
+            if (nomes.length === 0) {
+                suggestionsDiv.style.display = 'none'
+                suggestionsDiv.innerHTML = ''
+                return
+            }
+
+            suggestionsDiv.innerHTML = nomes.slice(0, 10).map(n => `
+                <div class="suggestion" onclick="selecionarDoAutocomplete('${n.replace(/'/g, "\\'")}')">${escaparHTML(n)}</div>
+            `).join('')
+            suggestionsDiv.style.display = 'block'
+        }
+
+        function selecionarDoAutocomplete(nome) {
+            buscaAluno.value = nome
+            let suggestionsDiv = document.getElementById('autocompleteSuggestions')
+            suggestionsDiv.style.display = 'none'
+            buscarAluno()
+        }
+
         function buscarAluno() {
-            let t = buscaAluno.value.toLowerCase()
+            let t = buscaAluno.value.toLowerCase().trim()
+            let suggestionsDiv = document.getElementById('autocompleteSuggestions')
+            suggestionsDiv.style.display = 'none'
+            
             let nomes = [...new Set(dados.filter(d => d.nome.toLowerCase().includes(t)).map(d => d.nome))]
 
             listaAlunos.innerHTML = nomes.map(n => `
