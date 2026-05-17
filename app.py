@@ -184,5 +184,7 @@ def static_proxy(path):
 
 
 if __name__ == '__main__':
-    # run on localhost:5000
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # run on localhost:5000 by default, or use the PORT from Render / other hosts
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_DEBUG', 'false').lower() in ('1', 'true', 'yes')
+    app.run(host='0.0.0.0', port=port, debug=debug)

@@ -8,6 +8,21 @@ O arquivo CSV gerado pode ser manipulado de forma independente para geração de
 
 Para explorar os dados gerados clique [aqui](saida/index.html)
 
+## Deploy no Render
+
+Este projeto pode ser publicado no Render como um serviço Python.
+
+1. Adicione o repositório no Render.
+2. Use o build command:
+   - `pip install -r requirements.txt`
+3. Use o start command:
+   - `gunicorn app:app --bind 0.0.0.0:$PORT`
+4. Defina as variáveis de ambiente no painel do serviço:
+   - `SUPABASE_URL`
+   - `SUPABASE_KEY`
+
+O `Procfile` e o `requirements.txt` já foram ajustados para suporte.
+
 ## Detalhes técnicos
 
 Programado em Python e API Selenium
