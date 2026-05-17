@@ -277,8 +277,8 @@ def extrair_dados_de_um_pdf(pdf_path):
     return linhas_deste_pdf
 
 
-def salvar_faltas_supabase(dados, colunas):
-    """Envia os dados extraídos para a tabela 'faltas' do Supabase."""
+def limpar_tabela_supabase():
+    """Limpa a tabela 'faltas' no Supabase antes de reinserir os dados."""
     if not SUPABASE_URL or not SUPABASE_KEY:
         print("ERRO: SUPABASE_URL ou SUPABASE_KEY não definidos no ambiente.")
         return False
@@ -288,10 +288,44 @@ def salvar_faltas_supabase(dados, colunas):
     headers = {
         'apikey': SUPABASE_KEY,
         'Authorization': f'Bearer {SUPABASE_KEY}',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+    }
+
+    try:
+        print(f"Limpando tabela '{table}' no Supabase...")
+        r_delete = requests.delete(base_url, headers=headers, timeout=30)
+        if r_delete.status_code not in (200, 204):
+            print(f"ERRO ao limpar tabela: {r_delete.status_code} - {r_delete.text}")
+            return False
+        print(f"✓ Tabela '{table}' limpa com sucesso no Supabase.")
+        return True
+    except Exception as e:
+        print(f"ERRO ao limpar tabela: {e}")
+        return False
+
+
+def salvar_faltas_supabase(dados, colunas):
+    """Envia os dados extraídos para a tabela 'faltas' do Supabase."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        print("ERRO: SUPABASE_URL ou SUPABASE_KEY não definidos no ambiente.")
+        return False
+
+    if not limpar_tabela_supabase():
+        return False
+
+    if not dados:
+        print("Nenhum dado para inserir no Supabase.")
+        return True
+
+    table = 'faltas'
+    base_url = SUPABASE_URL.rstrip('/') + f'/rest/v1/{table}'
+    headers = {
+        'apikey': SUPABASE_KEY,
+        'Authorization': f'Bearer {SUPABASE_KEY}',
         'Content-Type': 'application/json'
     }
 
-    # Inserir em lotes (merge-duplicates faz upsert automático)
     batch_size = 200
     inserted = 0
     try:
@@ -300,7 +334,7 @@ def salvar_faltas_supabase(dados, colunas):
             print(f"Inserindo lote {i//batch_size + 1} ({len(batch)} registros)...")
             r_insert = requests.post(
                 base_url,
-                headers={**headers, 'Prefer': 'resolution=merge-duplicates'},
+                headers=headers,
                 json=batch,
                 timeout=30
             )
