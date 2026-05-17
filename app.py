@@ -147,16 +147,7 @@ def api_upload_csv():
         'Content-Type': 'application/json'
     }
 
-    # clear table
-    try:
-        rdel = requests.delete(base, headers={**headers, 'Prefer': 'return=representation'}, timeout=20)
-        # allow 200/204 responses
-        if rdel.status_code not in (200, 204):
-            return jsonify({'error': 'Falha ao limpar tabela no Supabase', 'status': rdel.status_code, 'detail': rdel.text}), 502
-    except Exception as e:
-        return jsonify({'error': 'Exceção ao limpar tabela', 'detail': str(e)}), 502
-
-    # insert in batches
+    # insert in batches (merge-duplicates handles updates automatically)
     batch_size = 200
     inserted = 0
     for i in range(0, len(rows), batch_size):

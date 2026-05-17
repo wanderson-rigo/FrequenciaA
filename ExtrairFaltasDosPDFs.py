@@ -260,22 +260,7 @@ def salvar_faltas_supabase(dados, colunas):
         'Content-Type': 'application/json'
     }
 
-    # Limpar tabela
-    try:
-        print(f"Limpando tabela '{table}' no Supabase...")
-        r_delete = requests.delete(
-            base_url,
-            headers={**headers, 'Prefer': 'return=representation'},
-            timeout=20
-        )
-        if r_delete.status_code not in (200, 204):
-            print(f"ERRO ao limpar: {r_delete.status_code} - {r_delete.text}")
-            return False
-    except Exception as e:
-        print(f"ERRO ao limpar tabela: {e}")
-        return False
-
-    # Inserir em lotes
+    # Inserir em lotes (merge-duplicates faz upsert automático)
     batch_size = 200
     inserted = 0
     try:
@@ -292,7 +277,7 @@ def salvar_faltas_supabase(dados, colunas):
                 print(f"ERRO ao inserir lote: {r_insert.status_code} - {r_insert.text}")
                 return False
             inserted += len(batch)
-        print(f"OK {inserted} registros inseridos com sucesso no Supabase!")
+        print(f"✓ {inserted} registros inseridos com sucesso no Supabase!")
         return True
     except Exception as e:
         print(f"ERRO ao inserir dados: {e}")
