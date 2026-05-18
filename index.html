@@ -1312,7 +1312,7 @@ ${alunos.slice(0, 10).map(a => `${a[0]} (${a[1]})`).join("<br>")}
             resRisco.innerHTML = ranking.map((a, i) => {
                 let m = a.maiorRisco
                 return `<div class="card ${getClasse(m)}" onclick="det('${a.nome}')">
-<b>${i + 1}. ${a.nome}</b><br>${a.q} disciplinas<br>${(m * 100).toFixed(1)}%
+<b>${i + 1}. ${a.nome}</b><br>${a.q} disciplinas em risco<br>${(m * 100).toFixed(1)}%
 </div>`
             }).join("") || (filtro ? "Nenhum aluno nesta faixa" : "Nenhum em risco")
         }
