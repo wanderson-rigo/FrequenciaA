@@ -1278,6 +1278,80 @@ ${alunos.slice(0, 10).map(a => `${a[0]} (${a[1]})`).join("<br>")}
 
         }
 
+        // PESQUISAR
+        function popularDisciplinasPesquisa() {
+            const select = document.getElementById('selectDisciplinasPesquisa');
+            if (!select) return;
+            
+            const fonte = dadosTemp.length ? dadosTemp : dados;
+            let u = [...new Set(fonte.map(d => d.disciplina))]
+                .sort((a, b) => a.localeCompare(b, "pt-BR"));
+                
+            select.innerHTML = `
+                <option value="__todas__">Todas as disciplinas</option>
+                ${u.map(d => `<option>${d}</option>`).join("")}
+            `;
+        }
+
+        function pesquisarFaltas() {
+            const dataInicioStr = document.getElementById('dataInicio').value;
+            const dataFimStr = document.getElementById('dataFim').value;
+            const selectDisciplinasPesquisa = document.getElementById('selectDisciplinasPesquisa');
+            const resPesquisa = document.getElementById('resPesquisa');
+
+            if (!resPesquisa) return;
+
+            let dataInicio = dataInicioStr ? new Date(dataInicioStr + 'T00:00:00') : null;
+            let dataFim = dataFimStr ? new Date(dataFimStr + 'T23:59:59') : null;
+
+            const selectedDisciplines = [...selectDisciplinasPesquisa.selectedOptions]
+                .map(option => option.value)
+                .filter(value => value !== '__todas__');
+
+            let faltasFiltradas = dados.filter(d => {
+                if (d.faltas === 0) return false;
+
+                const dataFalta = parseData(d.data);
+                if (!dataFalta) return false;
+
+                if (dataInicio && dataFalta < dataInicio) return false;
+                if (dataFim && dataFalta > dataFim) return false;
+
+                if (selectedDisciplines.length > 0 && !selectedDisciplines.includes(d.disciplina)) return false;
+
+                return true;
+            });
+
+            const resultadosAgrupados = {};
+            faltasFiltradas.forEach(falta => {
+                if (!resultadosAgrupados[falta.nome]) {
+                    resultadosAgrupados[falta.nome] = {};
+                }
+                if (!resultadosAgrupados[falta.nome][falta.disciplina]) {
+                    resultadosAgrupados[falta.nome][falta.disciplina] = [];
+                }
+                resultadosAgrupados[falta.nome][falta.disciplina].push(falta.data);
+            });
+
+            let htmlResult = '';
+            const nomesOrdenados = Object.keys(resultadosAgrupados).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+            if (nomesOrdenados.length === 0) {
+                htmlResult = '<div class="card">Nenhum aluno encontrado com faltas nos critérios selecionados.</div>';
+            } else {
+                nomesOrdenados.forEach(nomeAluno => {
+                    htmlResult += `<div class="card"><h3>${escaparHTML(nomeAluno)}</h3>`;
+                    const disciplinasAluno = Object.keys(resultadosAgrupados[nomeAluno]).sort((a, b) => a.localeCompare(b, "pt-BR"));
+                    disciplinasAluno.forEach(disciplina => {
+                        const datasFalta = [...new Set(resultadosAgrupados[nomeAluno][disciplina])].sort((a, b) => parseData(a) - parseData(b));
+                        htmlResult += `<p><strong>${escaparHTML(disciplina)}:</strong> ${datasFalta.map(escaparHTML).join(', ')}</p>`;
+                    });
+                    htmlResult += `</div>`;
+                });
+            }
+            resPesquisa.innerHTML = htmlResult;
+        }
+
         // RISCO
         function getClasse(p) {
             if (p >= 0.6) return "risco-critico"
