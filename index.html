@@ -476,6 +476,7 @@
         <button onclick="openTab('alunos')" data-requer-importacao disabled>👤 Alunos</button>
         <button onclick="openTab('disciplinas')" data-requer-importacao disabled>📚 Disciplinas</button>
         <button onclick="openTab('risco')" data-requer-importacao disabled>⚠️ Risco</button>
+        <button onclick="openTab('pesquisar')" data-requer-importacao disabled>🔍 Pesquisar</button>
         <button onclick="openTab('estatisticas')" data-requer-importacao disabled>📊 Estatísticas</button>
     </div>
 
@@ -545,6 +546,23 @@
         <div id="resRisco"></div>
     </div>
 
+    <!-- PESQUISAR -->
+    <div id="pesquisar" class="tab">
+        <h2>Pesquisar Faltas</h2>
+        <div class="help">
+            <b>Como usar:</b> selecione uma data ou um período e, opcionalmente, filtre por disciplina para ver os alunos que faltaram.
+        </div>
+        <div class="toolbar">
+            <label for="dataInicio">Data Início:</label>
+            <input type="date" id="dataInicio">
+            <label for="dataFim">Data Fim:</label>
+            <input type="date" id="dataFim">
+            <select id="selectDisciplinasPesquisa" multiple size="3"></select>
+            <button onclick="pesquisarFaltas()">Pesquisar</button>
+        </div>
+        <div id="resPesquisa"></div>
+    </div>
+
     <div id="estatisticas" class="tab">
 
         <h2>📊 Estatísticas</h2>
@@ -576,6 +594,22 @@
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#39;")
+        }
+
+        // Helper function to parse DD/MM/YYYY to Date object
+        function parseData(dataStr) {
+            if (!dataStr) return null;
+            const parts = dataStr.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+                const year = parseInt(parts[2], 10);
+                const date = new Date(year, month, day);
+                if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+                    return date;
+                }
+            }
+            return null;
         }
 
         function mostrarLog(mensagem) {
@@ -651,6 +685,7 @@
                 dadosTemp = dados.slice()
                 atualizarAbasImportacao()
                 popularDisciplinas()
+                popularDisciplinasPesquisa() // Call for the new tab
                 mostrarLog(`Dados carregados automaticamente via API SQLite. Linhas carregadas: ${dados.length}. Para sobrescrever, importe um CSV válido.`)
             } catch (erro) {
                 mostrarLog(`Não foi possível carregar dados via API. Importe um CSV ou inicie o servidor que serve a pasta 'saida'.<br><br>${escaparHTML(erro.message || String(erro))}`)
@@ -798,6 +833,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                 dadosTemp = dados.slice()
                 atualizarAbasImportacao()
                 popularDisciplinas()
+                popularDisciplinasPesquisa() // Call for the new tab
                 mostrarLog(`Dados carregados automaticamente via Supabase. Linhas carregadas: ${dados.length}. Para sobrescrever, selecione um CSV e confirme.`)
 
             } catch (erro) {
@@ -857,6 +893,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                     }
 
                     mostrarLog(`Origem: ${origem}<br>Linhas válidas: ${dadosTemp.length}<br>Erros: ${erros.length}<br>Status: ${confirmarAutomaticamente ? "carregado e confirmado automaticamente" : "pré-visualizado, clique em Confirmar importação"}<br><br>${erros.join("<br>")}`)
+                    popularDisciplinasPesquisa() // Call for the new tab
                     popularDisciplinas()
                 }
             })
@@ -935,6 +972,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                     preview.innerHTML = `\n<div class="preview-card">\n    <h3>Prévia dos dados</h3>\n    <table>\n        <thead>\n            <tr>\n                <th>Aluno</th>\n                <th>Disciplina</th>\n                <th>Data</th>\n                <th>Faltas</th>\n                <th>% faltas</th>\n            </tr>\n        </thead>\n        <tbody>${linhasPreview}</tbody>\n    </table>\n</div>\n`
 
                     mostrarLog(`Origem: Arquivo selecionado<br>Linhas válidas: ${dadosTemp.length}<br>Erros: ${erros.length}<br>Status: pré-visualizado, clique em Confirmar importação<br><br>${erros.join("<br>")}`)
+                    popularDisciplinasPesquisa() // Call for the new tab
                     popularDisciplinas()
                 }
             })
@@ -1001,28 +1039,6 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
         function selAluno(el, nome) {
 
             document.querySelectorAll('#listaAlunos .card').forEach(c => c.classList.remove('selected'))
-            el.classList.add('selected')
-
-            let f = dados.filter(d => d.nome == nome)
-
-            if (f.length === 0) {
-                resAluno.innerHTML = "Aluno não encontrado"
-                return
-            }
-
-            // ================= AUX =================
-            function parseData(data) {
-                if (!data) return null
-
-                let partes = data.split("/")
-                if (partes.length !== 3) return null
-
-                let [dia, mes, ano] = partes.map(n => parseInt(n))
-                let date = new Date(ano, mes - 1, dia)
-
-                return isNaN(date.getTime()) ? null : date
-            }
-
             function formatarData(date) {
                 return date ? date.toLocaleDateString("pt-BR") : "-"
             }
@@ -1471,3 +1487,4 @@ ${disc}<br>${(p * 100).toFixed(1)}% (${info.f}/${info.c} aulas)
 </body>
 
 </html>
+<!-- Quem faltou no dia X na disciplina Y? -->
