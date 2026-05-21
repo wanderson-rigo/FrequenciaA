@@ -552,13 +552,24 @@
         <div class="help">
             <b>Como usar:</b> selecione uma data ou um período e, opcionalmente, filtre por disciplina para ver os alunos que faltaram.
         </div>
-        <div class="toolbar">
-            <label for="dataInicio">Data Início:</label>
-            <input type="date" id="dataInicio">
-            <label for="dataFim">Data Fim:</label>
-            <input type="date" id="dataFim">
-            <select id="selectDisciplinasPesquisa" multiple size="3"></select>
-            <button onclick="pesquisarFaltas()">Pesquisar</button>
+        <div class="toolbar" style="display: block;">
+            <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="dataInicio">Início:</label>
+                    <input type="date" id="dataInicio" style="width: 160px;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="dataFim">Fim:</label>
+                    <input type="date" id="dataFim" style="width: 160px;">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px;">
+                    <label for="selectDisciplinasPesquisa" style="display: block; margin-bottom: 5px;">Filtrar por Disciplinas:</label>
+                    <select id="selectDisciplinasPesquisa" multiple size="3" style="width: 100%; min-height: 100px;"></select>
+                </div>
+                <button onclick="pesquisarFaltas()" style="height: 42px;">Pesquisar</button>
+            </div>
         </div>
         <div id="resPesquisa"></div>
     </div>
