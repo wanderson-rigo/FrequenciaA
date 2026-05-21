@@ -1327,10 +1327,11 @@ ${alunos.slice(0, 10).map(a => `${a[0]} (${a[1]})`).join("<br>")}
                 if (!resultadosAgrupados[falta.nome]) {
                     resultadosAgrupados[falta.nome] = {};
                 }
-                if (!resultadosAgrupados[falta.nome][falta.disciplina]) {
-                    resultadosAgrupados[falta.nome][falta.disciplina] = [];
+                // Agrupa por data para exibir a cronologia, com disciplinas abaixo
+                if (!resultadosAgrupados[falta.nome][falta.data]) {
+                    resultadosAgrupados[falta.nome][falta.data] = new Set();
                 }
-                resultadosAgrupados[falta.nome][falta.disciplina].push(falta.data);
+                resultadosAgrupados[falta.nome][falta.data].add(falta.disciplina);
             });
 
             let htmlResult = '';
@@ -1340,11 +1341,16 @@ ${alunos.slice(0, 10).map(a => `${a[0]} (${a[1]})`).join("<br>")}
                 htmlResult = '<div class="card">Nenhum aluno encontrado com faltas nos critérios selecionados.</div>';
             } else {
                 nomesOrdenados.forEach(nomeAluno => {
-                    htmlResult += `<div class="card"><h3>${escaparHTML(nomeAluno)}</h3>`;
-                    const disciplinasAluno = Object.keys(resultadosAgrupados[nomeAluno]).sort((a, b) => a.localeCompare(b, "pt-BR"));
-                    disciplinasAluno.forEach(disciplina => {
-                        const datasFalta = [...new Set(resultadosAgrupados[nomeAluno][disciplina])].sort((a, b) => parseData(a) - parseData(b));
-                        htmlResult += `<p><strong>${escaparHTML(disciplina)}:</strong> ${datasFalta.map(escaparHTML).join(', ')}</p>`;
+                    htmlResult += `<div class="card"><h3>👤 ${escaparHTML(nomeAluno)}</h3>`;
+                    const datasOrdenadas = Object.keys(resultadosAgrupados[nomeAluno]).sort((a, b) => parseData(a) - parseData(b));
+                    datasOrdenadas.forEach(data => {
+                        htmlResult += `<div style="margin-top: 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">`;
+                        htmlResult += `<strong style="color: var(--primary);">📅 ${escaparHTML(data)}</strong>`;
+                        const disciplinas = [...resultadosAgrupados[nomeAluno][data]].sort((a, b) => a.localeCompare(b, "pt-BR"));
+                        disciplinas.forEach(disc => {
+                            htmlResult += `<div style="margin-left: 20px; font-size: 0.9em; margin-top: 4px; color: var(--muted);">📚 ${escaparHTML(disc)}</div>`;
+                        });
+                        htmlResult += `</div>`;
                     });
                     htmlResult += `</div>`;
                 });
