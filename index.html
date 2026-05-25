@@ -1050,6 +1050,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
         function selAluno(el, nome) {
 
             document.querySelectorAll('#listaAlunos .card').forEach(c => c.classList.remove('selected'))
+            el.classList.add('selected') // Adiciona a classe 'selected' ao cartão clicado
             function formatarData(date) {
                 return date ? date.toLocaleDateString("pt-BR") : "-"
             }
@@ -1086,6 +1087,12 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                 return date ? date.getDay() : null // 0 = domingo
             }
 
+            let f = dados.filter(d => d.nome == nome)
+
+            if (f.length === 0) {
+                resAluno.innerHTML = `<div class="card">Nenhum dado encontrado para o aluno <b>${escaparHTML(nome)}</b>.</div>`
+                return
+            }
             const diasSemanaNome = [
                 "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"
             ]
@@ -1198,14 +1205,18 @@ Dia da semana que mais falta: ${diaSemanaTop}
 
             let por = {}
 
-            f.forEach(d => {
+            f.forEach(d => { // 'f' is already filtered for the selected student
                 if (!por[d.disciplina]) por[d.disciplina] = []
                 if (d.faltas > 0) por[d.disciplina].push(d)
             })
 
             Object.entries(por).forEach(([disc, arr]) => {
-                html += `<div class="card"><b>${disc}</b>`
-                arr.forEach(d => html += `<div>${d.data} (${d.faltas})</div>`)
+                html += `<div class="card"><b>${escaparHTML(disc)}</b>`
+                if (arr.length > 0) {
+                    arr.forEach(d => html += `<div>${escaparHTML(d.data)} (${d.faltas})</div>`)
+                } else {
+                    html += `<div>Nenhuma falta registrada para esta disciplina.</div>`
+                }
                 html += `</div>`
             })
 
