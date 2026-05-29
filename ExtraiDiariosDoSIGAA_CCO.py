@@ -9,7 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 import tkinter as tk
 from selenium import webdriver
 from selenium.webdriver.common.alert import Alert
@@ -72,6 +72,10 @@ def extrair_notas_sigaa():
 
     browser.find_element(By.ID, "form:buttonBuscar").click()
 
+    #esperar a tabela carregar
+    WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.ID, "lista-turmas")))
+
+
     minhasTurmas = ["CCC0741 - COMPILADORES", 
                     "CCC0703 - FUNDAMENTOS MATEMÁTICOS DA COMPUTAÇÃO", 
                     "CCC0730 - INTERAÇÃO HUMANA COM DISPOSITIVOS", 
@@ -80,6 +84,10 @@ def extrair_notas_sigaa():
     i = 0
 
     while True:
+
+        #esperar a tabela carregar
+        WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.ID, "lista-turmas")))
+        
         linhas = browser.find_elements(By.XPATH, "//table[@id='lista-turmas']//tbody/tr")
 
         if i >= len(linhas):
@@ -179,6 +187,9 @@ def extrair_notas_sigaa():
 
         except Exception as e:
             print(f"Erro na linha {i}: {e}")
+            print(f"Full exception: {repr(e)}")
+        except TimeoutException as et:
+            print(f"Timeout na linha {i}: {et}")
 
         i += 1
     
@@ -202,6 +213,7 @@ def main():
 
     except Exception as e:
         print("Erro ao carregar as configurações:", e)
+        print(f"Full exception: {repr(e)}")
 
 if __name__ == "__main__":
     # fallback (mantém funcionando standalone)
