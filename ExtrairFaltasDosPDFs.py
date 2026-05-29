@@ -428,6 +428,7 @@ else:
         writer.writeheader()
         writer.writerows(all_data)
 
+    limpar_tabela_supabase()
     salvar_faltas_supabase(all_data, colunas)
 
     print("\n" + "=" * 60)

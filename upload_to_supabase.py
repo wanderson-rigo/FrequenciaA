@@ -11,8 +11,12 @@ Usage:
 The script does NOT create the table. Use `supabase_schema.sql` to create the table in Supabase SQL editor.
 """
 import os
+from dotenv import load_dotenv
 import csv
 import requests
+
+# Load the variables from .env into the environment
+load_dotenv()
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY')

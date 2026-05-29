@@ -1351,9 +1351,20 @@ ${alunos.slice(0, 10).map(a => `${a[0]} (${a[1]})`).join("<br>")}
                 }
                 // Agrupa por data para exibir a cronologia, com disciplinas abaixo
                 if (!resultadosAgrupados[falta.nome][falta.data]) {
-                    resultadosAgrupados[falta.nome][falta.data] = new Set();
+                    resultadosAgrupados[falta.nome][falta.data] = {};
                 }
-                resultadosAgrupados[falta.nome][falta.data].add(falta.disciplina);
+                const disc = falta.disciplina;
+                if (!resultadosAgrupados[falta.nome][falta.data][disc]) {
+                    resultadosAgrupados[falta.nome][falta.data][disc] = 0;
+                }
+                resultadosAgrupados[falta.nome][falta.data][disc] += falta.faltas;
+            });
+
+            // Calcula total de faltas por disciplina para exibir no cabeçalho do aluno
+            const totalPorAlunoDisciplina = {};
+            faltasFiltradas.forEach(falta => {
+                const chave = falta.nome + '|' + falta.disciplina;
+                totalPorAlunoDisciplina[chave] = (totalPorAlunoDisciplina[chave] || 0) + falta.faltas;
             });
 
             let htmlResult = '';
@@ -1363,14 +1374,30 @@ ${alunos.slice(0, 10).map(a => `${a[0]} (${a[1]})`).join("<br>")}
                 htmlResult = '<div class="card">Nenhum aluno encontrado com faltas nos critérios selecionados.</div>';
             } else {
                 nomesOrdenados.forEach(nomeAluno => {
-                    htmlResult += `<div class="card"><h3>👤 ${escaparHTML(nomeAluno)}</h3>`;
+                    // Resumo de faltas totais por disciplina para este aluno
+                    const discDoAluno = Object.entries(totalPorAlunoDisciplina)
+                        .filter(([k]) => k.startsWith(nomeAluno + '|'))
+                        .map(([k, v]) => ({ disc: k.split('|')[1], total: v }))
+                        .sort((a, b) => a.disc.localeCompare(b.disc, "pt-BR"));
+
+                    const totalGeralAluno = discDoAluno.reduce((acc, d) => acc + d.total, 0);
+
+                    let resumoDisc = discDoAluno.map(d =>
+                        `<span style="display:inline-block; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:2px 10px; font-size:0.82em; color:var(--primary); margin:2px 4px 2px 0;">📚 ${escaparHTML(d.disc)} — <b>${d.total}</b> falta${d.total !== 1 ? 's' : ''}</span>`
+                    ).join('');
+
+                    htmlResult += `<div class="card">`;
+                    htmlResult += `<h3 style="margin-bottom:6px;">👤 ${escaparHTML(nomeAluno)} <span style="font-size:0.7em; font-weight:normal; color:var(--muted);">(${totalGeralAluno} falta${totalGeralAluno !== 1 ? 's' : ''} no total)</span></h3>`;
+                    htmlResult += `<div style="margin-bottom:12px;">${resumoDisc}</div>`;
+
                     const datasOrdenadas = Object.keys(resultadosAgrupados[nomeAluno]).sort((a, b) => parseData(a) - parseData(b));
                     datasOrdenadas.forEach(data => {
                         htmlResult += `<div style="margin-top: 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">`;
                         htmlResult += `<strong style="color: var(--primary);">📅 ${escaparHTML(data)}</strong>`;
-                        const disciplinas = [...resultadosAgrupados[nomeAluno][data]].sort((a, b) => a.localeCompare(b, "pt-BR"));
-                        disciplinas.forEach(disc => {
-                            htmlResult += `<div style="margin-left: 20px; font-size: 0.9em; margin-top: 4px; color: var(--muted);">📚 ${escaparHTML(disc)}</div>`;
+                        const disciplinas = Object.entries(resultadosAgrupados[nomeAluno][data])
+                            .sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
+                        disciplinas.forEach(([disc, qtd]) => {
+                            htmlResult += `<div style="margin-left: 20px; font-size: 0.9em; margin-top: 4px; color: var(--muted);">📚 ${escaparHTML(disc)} — <b style="color:var(--text);">${qtd} falta${qtd !== 1 ? 's' : ''}</b></div>`;
                         });
                         htmlResult += `</div>`;
                     });
