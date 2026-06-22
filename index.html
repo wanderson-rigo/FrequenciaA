@@ -1211,7 +1211,8 @@ Dia da semana que mais falta: ${diaSemanaTop}
             })
 
             Object.entries(por).forEach(([disc, arr]) => {
-                html += `<div class="card"><b>${escaparHTML(disc)}</b>`
+                const totalDisciplina = arr.reduce((total, d) => total + d.faltas, 0)
+                html += `<div class="card"><b>${escaparHTML(disc)} - ${totalDisciplina} falta${totalDisciplina !== 1 ? 's' : ''}</b>`
                 if (arr.length > 0) {
                     arr.forEach(d => html += `<div>${escaparHTML(d.data)} (${d.faltas})</div>`)
                 } else {
