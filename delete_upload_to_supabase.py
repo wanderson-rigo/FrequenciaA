@@ -46,6 +46,20 @@ def main():
         'Prefer': 'resolution=merge-duplicates'
     }
 
+    # apagar dados antigos
+    try:
+        delete_url = f"{url}?id=not.is.null"
+        r = requests.delete(delete_url, headers=headers, timeout=30)
+        
+        if r.status_code not in (200, 204):
+            print('Erro ao apagar dados antigos', r.status_code, r.text)
+            return
+
+        print('Dados antigos apagados.')
+    except Exception as e:
+        print('Exceção ao apagar dados antigos', e)
+        return
+
     # send in batches
     batch_size = 200
     for i in range(0, len(rows), batch_size):
