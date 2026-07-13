@@ -472,26 +472,12 @@
     </div>
 
     <div class="tabs">
-        <button class="active" onclick="openTab('import')">📥 Importar</button>
         <button onclick="openTab('alunos')" data-requer-importacao disabled>👤 Alunos</button>
         <button onclick="openTab('disciplinas')" data-requer-importacao disabled>📚 Disciplinas</button>
         <button onclick="openTab('risco')" data-requer-importacao disabled>⚠️ Risco</button>
         <button onclick="openTab('pesquisar')" data-requer-importacao disabled>🔍 Pesquisar</button>
         <button onclick="openTab('estatisticas')" data-requer-importacao disabled>📊 Estatísticas</button>
-    </div>
-
-    <!-- IMPORT -->
-    <div id="import" class="tab" style="display:block">
-        <h2>Importar CSV</h2>
-        <div class="help">
-            <b>Como usar:</b> os dados são carregados automaticamente do Supabase ao abrir a página. Se desejar, selecione um arquivo CSV para sobrescrever os dados no Supabase, confira a prévia e clique em <b>Confirmar importação</b>.
-        </div>
-        <div class="toolbar">
-            <input type="file" id="fileInput" accept=".csv">
-            <button onclick="confirmarImportacao()">Confirmar importação</button>
-        </div>
-        <div id="preview"></div>
-        <div id="log" class="log" hidden></div>
+        <button class="active" onclick="openTab('import')">📥 Importar</button>
     </div>
 
     <!-- ALUNOS -->
@@ -585,6 +571,20 @@
 
         <div id="areaEstatisticas"></div>
 
+    </div>
+
+    <!-- IMPORT -->
+    <div id="import" class="tab" style="display:block">
+        <h2>Importar CSV</h2>
+        <div class="help">
+            <b>Como usar:</b> os dados são carregados automaticamente do Supabase ao abrir a página. Se desejar, selecione um arquivo CSV para sobrescrever os dados no Supabase, confira a prévia e clique em <b>Confirmar importação</b>.
+        </div>
+        <div class="toolbar">
+            <input type="file" id="fileInput" accept=".csv">
+            <button onclick="confirmarImportacao()">Confirmar importação</button>
+        </div>
+        <div id="preview"></div>
+        <div id="log" class="log" hidden></div>
     </div>
 
     </div>
