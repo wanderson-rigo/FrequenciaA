@@ -256,23 +256,25 @@ def extrair_dados_de_um_pdf(pdf_path):
                                     falta_texto = fatiamento[i_data].strip()
                                     qtd_faltas = parse_quantidade_falta(falta_texto)
 
-                                    if qtd_faltas > 0:
-                                        linhas_deste_pdf.append({
-                                            "codigo_disciplina": codigo_disciplina,
-                                            "disciplina":  disciplina,
-                                            "turma": turma,
-                                            "matricula": mat_aluno,
-                                            "nome": nome_aluno,
-                                            "aula": idx_aula + 1,
-                                            "data": data_final,
-                                            "faltas": qtd_faltas,
-                                            "total_faltas_pdf": total_faltas_pdf,
-                                            "carga_horaria": carga_horaria,
-                                            "aulas_ministradas": aulas_ministradas,
-                                            "percentual_ministrado": f"{percentual_ministrado}%",
-                                            "percentual_faltas": f"{percentual_faltas}%",
-                                            "situacao": situacao,
-                                        })
+                                    # Mantém também os registros sem falta. Assim, relatórios
+                                    # consolidados podem listar todos os alunos, inclusive os
+                                    # que permanecem com frequência integral.
+                                    linhas_deste_pdf.append({
+                                        "codigo_disciplina": codigo_disciplina,
+                                        "disciplina":  disciplina,
+                                        "turma": turma,
+                                        "matricula": mat_aluno,
+                                        "nome": nome_aluno,
+                                        "aula": idx_aula + 1,
+                                        "data": data_final,
+                                        "faltas": qtd_faltas,
+                                        "total_faltas_pdf": total_faltas_pdf,
+                                        "carga_horaria": carga_horaria,
+                                        "aulas_ministradas": aulas_ministradas,
+                                        "percentual_ministrado": f"{percentual_ministrado}%",
+                                        "percentual_faltas": f"{percentual_faltas}%",
+                                        "situacao": situacao,
+                                    })
 
     return linhas_deste_pdf
 

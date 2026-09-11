@@ -388,8 +388,49 @@
         #resAluno,
         #resDisciplinas,
         #resRisco,
-        #areaEstatisticas {
+        #areaEstatisticas,
+        #resRelatorio {
             margin-top: 18px;
+        }
+
+        .relatorio-resumo {
+            color: var(--muted);
+            margin: 0 0 12px;
+        }
+
+        .tabela-relatorio {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .tabela-relatorio th,
+        .tabela-relatorio td {
+            padding: 11px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tabela-relatorio th {
+            color: var(--muted);
+            background: var(--surface-soft);
+        }
+
+        .tabela-relatorio th:not(:first-child),
+        .tabela-relatorio td:not(:first-child) {
+            text-align: right;
+        }
+
+        .tabela-relatorio tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .relatorio-tabela-wrapper {
+            overflow-x: auto;
         }
 
         #listaAlunos {
@@ -476,6 +517,7 @@
         <button onclick="openTab('disciplinas')" data-requer-importacao disabled>📚 Disciplinas</button>
         <button onclick="openTab('risco')" data-requer-importacao disabled>⚠️ Risco</button>
         <button onclick="openTab('pesquisar')" data-requer-importacao disabled>🔍 Pesquisar</button>
+        <button onclick="openTab('relatorio')" data-requer-importacao disabled>Relatório</button>
         <button onclick="openTab('estatisticas')" data-requer-importacao disabled>📊 Estatísticas</button>
         <button class="active" onclick="openTab('import')">📥 Importar</button>
     </div>
@@ -558,6 +600,23 @@
             </div>
         </div>
         <div id="resPesquisa"></div>
+    </div>
+
+    <!-- RELATÓRIO -->
+    <div id="relatorio" class="tab">
+        <h2>Relatório de faltas</h2>
+        <div class="help">
+            <b>Como usar:</b> escolha a ordenação e clique em <b>Gerar relatório</b>. O total é a soma das faltas do aluno; a porcentagem considera a carga horária total das disciplinas em que ele possui registros.
+        </div>
+        <div class="toolbar">
+            <select id="ordenacaoRelatorio" aria-label="Ordenação do relatório" style="min-height:42px; width:280px;">
+                <option value="alfabetica">Nome (A-Z)</option>
+                <option value="faltas">Total de faltas (maior para menor)</option>
+            </select>
+            <button onclick="gerarRelatorio()">Gerar relatório</button>
+            <button class="secondary-button" onclick="exportarRelatorioCSV()">Exportar CSV</button>
+        </div>
+        <div id="resRelatorio"></div>
     </div>
 
     <div id="estatisticas" class="tab">
@@ -807,6 +866,8 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
             document.querySelectorAll('.tabs button').forEach(b => b.classList.remove("active"))
             document.getElementById(id).style.display = "block"
             document.querySelector(`.tabs button[onclick="openTab('${id}')"]`)?.classList.add("active")
+
+            if (id === "relatorio") gerarRelatorio()
         }
 
         async function carregarDadosSQLite() {
@@ -1045,6 +1106,124 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
             return dados
                 .filter(d => d.nome == nome)
                 .reduce((total, d) => total + d.faltas, 0)
+        }
+
+        function obterDadosRelatorio() {
+            const alunos = new Map()
+
+            dados.forEach(d => {
+                if (!d.nome) return
+
+                if (!alunos.has(d.nome)) {
+                    alunos.set(d.nome, {
+                        nome: d.nome,
+                        faltas: 0,
+                        disciplinas: new Map()
+                    })
+                }
+
+                const aluno = alunos.get(d.nome)
+                aluno.faltas += d.faltas || 0
+
+                // A carga horária se repete em cada registro de falta. Por isso,
+                // ela é contabilizada uma única vez por disciplina.
+                if (!aluno.disciplinas.has(d.disciplina)) {
+                    aluno.disciplinas.set(d.disciplina, Number(d.carga_horaria) || 0)
+                }
+            })
+
+            return [...alunos.values()].map(aluno => {
+                const cargaHoraria = [...aluno.disciplinas.values()]
+                    .reduce((total, carga) => total + carga, 0)
+
+                return {
+                    nome: aluno.nome,
+                    faltas: aluno.faltas,
+                    disciplinas: aluno.disciplinas.size,
+                    cargaHoraria,
+                    percentual: cargaHoraria > 0 ? (aluno.faltas / cargaHoraria) * 100 : 0
+                }
+            })
+        }
+
+        function ordenarDadosRelatorio(relatorio) {
+            const ordenacao = document.getElementById('ordenacaoRelatorio')?.value || 'alfabetica'
+            const compararNome = new Intl.Collator('pt-BR', { sensitivity: 'base' }).compare
+
+            return relatorio.sort((a, b) => {
+                if (ordenacao === 'faltas') {
+                    return b.faltas - a.faltas || b.percentual - a.percentual || compararNome(a.nome, b.nome)
+                }
+                return compararNome(a.nome, b.nome)
+            })
+        }
+
+        function gerarRelatorio() {
+            const area = document.getElementById('resRelatorio')
+            if (!area) return
+
+            const relatorio = ordenarDadosRelatorio(obterDadosRelatorio())
+            if (relatorio.length === 0) {
+                area.innerHTML = '<div class="card">Nenhum dado disponível para gerar o relatório.</div>'
+                return
+            }
+
+            const totalFaltas = relatorio.reduce((total, aluno) => total + aluno.faltas, 0)
+            area.innerHTML = `
+                <p class="relatorio-resumo">${relatorio.length} aluno(s) listado(s) · ${totalFaltas} falta(s) no total</p>
+                <div class="relatorio-tabela-wrapper">
+                    <table class="tabela-relatorio">
+                        <thead>
+                            <tr>
+                                <th>Aluno</th>
+                                <th>Disciplinas</th>
+                                <th>Total de faltas</th>
+                                <th>Carga horária</th>
+                                <th>% de faltas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${relatorio.map(aluno => `
+                                <tr>
+                                    <td>${escaparHTML(aluno.nome)}</td>
+                                    <td>${aluno.disciplinas}</td>
+                                    <td>${aluno.faltas}</td>
+                                    <td>${aluno.cargaHoraria}</td>
+                                    <td>${aluno.percentual.toFixed(2).replace('.', ',')}%</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>`
+        }
+
+        function exportarRelatorioCSV() {
+            const relatorio = ordenarDadosRelatorio(obterDadosRelatorio())
+            if (relatorio.length === 0) {
+                alert('Não há dados para exportar.')
+                return
+            }
+
+            const valorCSV = valor => `"${String(valor ?? '').replace(/"/g, '""')}"`
+            const linhas = [
+                ['Aluno', 'Disciplinas', 'Total de faltas', 'Carga horária', 'Porcentagem de faltas'],
+                ...relatorio.map(aluno => [
+                    aluno.nome,
+                    aluno.disciplinas,
+                    aluno.faltas,
+                    aluno.cargaHoraria,
+                    `${aluno.percentual.toFixed(2).replace('.', ',')}%`
+                ])
+            ]
+            const csv = '\uFEFF' + linhas.map(linha => linha.map(valorCSV).join(';')).join('\r\n')
+            const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+            const link = document.createElement('a')
+            link.href = url
+            link.download = 'relatorio_faltas_alunos.csv'
+            document.body.appendChild(link)
+            link.click()
+            link.remove()
+            URL.revokeObjectURL(url)
         }
 
         function selAluno(el, nome) {

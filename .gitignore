@@ -11,3 +11,4 @@ __pycache__/ExtrairFaltasDosPDFs.cpython-314.pyc
 .gitignore
 __pycache__/app.cpython-314.pyc
 .env
+disciplinas_com_alunos.txt

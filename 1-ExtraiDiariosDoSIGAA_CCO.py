@@ -29,7 +29,7 @@ def extrair_notas_sigaa():
 
     #se fazio, perguntar com diálogo
     if not PASSWORD:
-        password = simpledialog.askstring("Senha", "Digite a sua senha de acesso ao SIGAA:", initialvalue="", show="*")
+        password = simpledialog.askstring("Senha", "Digite a sua senha de acesso ao SIGAA:", initialvalue="Fredy2009Ifc$", show="*")
         PASSWORD = password
 
     STUDANTS_NAMES = config.get("STUDANTS_NAMES")
@@ -75,13 +75,19 @@ def extrair_notas_sigaa():
     #esperar a tabela carregar
     WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.ID, "lista-turmas")))
 
+    minhasTurmas = ["CCC0745 - CIÊNCIA DE DADOS", 
+                    "CCC0737 - LINGUAGENS FORMAIS E AUTÔMATOS - 01", 
+                    "CCC0703 - FUNDAMENTOS MATEMÁTICOS DA COMPUTAÇÃO - 01"]
 
-    minhasTurmas = ["CCC0741 - COMPILADORES", 
-                    "CCC0703 - FUNDAMENTOS MATEMÁTICOS DA COMPUTAÇÃO", 
-                    "CCC0730 - INTERAÇÃO HUMANA COM DISPOSITIVOS", 
-                    "CCC0719 - PARADIGMAS DE PROGRAMAÇÃO"]
+    jaFoi =[ "CCC07117 - DESENVOLVIMENTO DE JOGOS E MODELAGEM 3D",
+              "CCC0723 - DESENVOLVIMENTO WEB I",
+              "CCC07116 - DEVOPS",
+              "CCC0746 - EMPREENDEDORISMO",
+              "CCC0735 - ENGENHARIA DE SOFTWARE II",
+              "CCC0710 - ESTRUTURA DE DADOS I",
+              "CCC0711 - ÉTICA E LEGISLAÇÃO"]
 
-    i = 0
+    i = 63 # vai de 3 em 3
 
     while True:
 
@@ -89,8 +95,9 @@ def extrair_notas_sigaa():
         WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.ID, "lista-turmas")))
         
         linhas = browser.find_elements(By.XPATH, "//table[@id='lista-turmas']//tbody/tr")
+        quantidade_linhas = len(linhas)
 
-        if i >= len(linhas):
+        if i >= quantidade_linhas:
             break
 
         linha = linhas[i]
@@ -168,7 +175,7 @@ def extrair_notas_sigaa():
                 browser.execute_script("arguments[0].click();", frequencia)
 
             #esperar o download
-            time.sleep(10)
+            time.sleep(5)
 
             # depois volta e atualiza a página
             browser.back()
