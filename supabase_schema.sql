@@ -3,6 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS faltas (
   id bigserial PRIMARY KEY,
+  matricula text,
   nome text,
   disciplina text,
   data text,
@@ -12,3 +13,5 @@ CREATE TABLE IF NOT EXISTS faltas (
   percentual_faltas text,
   situacao text
 );
+
+ALTER TABLE faltas ADD COLUMN IF NOT EXISTS matricula text;

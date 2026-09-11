@@ -685,6 +685,15 @@
                 .replace(/'/g, "&#39;")
         }
 
+        function exibirAluno(nome, matricula = '') {
+            const matriculaLimpa = String(matricula || '').trim()
+            return `${escaparHTML(nome)}${matriculaLimpa ? ` <span class="matricula-aluno">(${escaparHTML(matriculaLimpa)})</span>` : ''}`
+        }
+
+        function matriculaDoAluno(nome) {
+            return dados.find(d => d.nome === nome)?.matricula || ''
+        }
+
         // Helper function to parse DD/MM/YYYY to Date object
         function parseData(dataStr) {
             if (!dataStr) return null;
@@ -760,6 +769,7 @@
                     const percentual = parseFloat(String(registro.percentual_faltas || "").replace("%", "").replace(",", "."))
 
                     return {
+                        matricula: String(registro.matricula || "").trim(),
                         nome: String(registro.nome || "").trim(),
                         disciplina: String(registro.disciplina || "").trim(),
                         data: String(registro.data || "").trim(),
@@ -910,6 +920,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                     const percentual = parseFloat(String(registro.percentual_faltas || "").replace("%", "").replace(",", "."))
 
                     return {
+                        matricula: String(registro.matricula || "").trim(),
                         nome: String(registro.nome || "").trim(),
                         disciplina: String(registro.disciplina || "").trim(),
                         data: String(registro.data || "").trim(),
@@ -958,6 +969,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                             ) / 100
 
                             dadosTemp.push({
+                                matricula: String(row.matricula || "").trim(),
                                 nome: row.nome.trim(),
                                 disciplina: row.disciplina.trim(),
                                 data: row.data?.trim() || "",
@@ -974,7 +986,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                     })
 
                     let linhasPreview = dadosTemp.slice(0, 10)
-                        .map(d => `\n<tr>\n    <td>${escaparHTML(d.nome)}</td>\n    <td>${escaparHTML(d.disciplina)}</td>\n    <td>${escaparHTML(d.data || "-")}</td>\n    <td>${d.faltas}</td>\n    <td>${(d.perc * 100).toFixed(1)}%</td>\n</tr>\n`).join("")
+                        .map(d => `\n<tr>\n    <td>${exibirAluno(d.nome, d.matricula)}</td>\n    <td>${escaparHTML(d.disciplina)}</td>\n    <td>${escaparHTML(d.data || "-")}</td>\n    <td>${d.faltas}</td>\n    <td>${(d.perc * 100).toFixed(1)}%</td>\n</tr>\n`).join("")
 
                     preview.innerHTML = `\n<div class="preview-card">\n    <h3>Prévia dos dados</h3>\n    <table>\n        <thead>\n            <tr>\n                <th>Aluno</th>\n                <th>Disciplina</th>\n                <th>Data</th>\n                <th>Faltas</th>\n                <th>% faltas</th>\n            </tr>\n        </thead>\n        <tbody>${linhasPreview}</tbody>\n    </table>\n</div>\n`
 
@@ -1042,6 +1054,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                             ) / 100
 
                             dadosTemp.push({
+                                matricula: String(row.matricula || "").trim(),
                                 nome: row.nome.trim(),
                                 disciplina: row.disciplina.trim(),
                                 data: row.data?.trim() || "",
@@ -1058,7 +1071,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                     })
 
                     let linhasPreview = dadosTemp.slice(0, 10)
-                        .map(d => `\n<tr>\n    <td>${escaparHTML(d.nome)}</td>\n    <td>${escaparHTML(d.disciplina)}</td>\n    <td>${escaparHTML(d.data || "-")}</td>\n    <td>${d.faltas}</td>\n    <td>${(d.perc * 100).toFixed(1)}%</td>\n</tr>\n`).join("")
+                        .map(d => `\n<tr>\n    <td>${exibirAluno(d.nome, d.matricula)}</td>\n    <td>${escaparHTML(d.disciplina)}</td>\n    <td>${escaparHTML(d.data || "-")}</td>\n    <td>${d.faltas}</td>\n    <td>${(d.perc * 100).toFixed(1)}%</td>\n</tr>\n`).join("")
 
                     preview.innerHTML = `\n<div class="preview-card">\n    <h3>Prévia dos dados</h3>\n    <table>\n        <thead>\n            <tr>\n                <th>Aluno</th>\n                <th>Disciplina</th>\n                <th>Data</th>\n                <th>Faltas</th>\n                <th>% faltas</th>\n            </tr>\n        </thead>\n        <tbody>${linhasPreview}</tbody>\n    </table>\n</div>\n`
 
@@ -1094,7 +1107,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
             }
 
             suggestionsDiv.innerHTML = nomes.slice(0, 10).map(n => `
-                <div class="suggestion" onclick="selecionarDoAutocomplete('${n.replace(/'/g, "\\'")}')">${escaparHTML(n)}</div>
+                <div class="suggestion" onclick="selecionarDoAutocomplete('${n.replace(/'/g, "\\'")}')">${exibirAluno(n, matriculaDoAluno(n))}</div>
             `).join('')
             suggestionsDiv.style.display = 'block'
         }
@@ -1115,7 +1128,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
 
             listaAlunos.innerHTML = nomes.map(n => `
 <div class="card aluno-card" onclick="selAluno(this,'${n}')">
-    <b>${n}</b>
+    <b>${exibirAluno(n, matriculaDoAluno(n))}</b>
     <span class="aluno-total">(${totalFaltasAluno(n)} aulas)</span>
 </div>
 `).join("")
@@ -1136,6 +1149,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                 if (!alunos.has(d.nome)) {
                     alunos.set(d.nome, {
                         nome: d.nome,
+                        matricula: d.matricula,
                         faltas: 0,
                         disciplinas: new Map()
                     })
@@ -1157,6 +1171,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
 
                 return {
                     nome: aluno.nome,
+                    matricula: aluno.matricula,
                     faltas: aluno.faltas,
                     disciplinas: aluno.disciplinas.size,
                     cargaHoraria,
@@ -1203,7 +1218,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                         <tbody>
                             ${relatorio.map(aluno => `
                                 <tr>
-                                    <td><button type="button" class="detalhar-aluno" data-aluno="${escaparHTML(aluno.nome)}">${escaparHTML(aluno.nome)}</button></td>
+                                    <td><button type="button" class="detalhar-aluno" data-aluno="${escaparHTML(aluno.nome)}">${exibirAluno(aluno.nome, aluno.matricula)}</button></td>
                                     <td>${aluno.disciplinas}</td>
                                     <td>${aluno.faltas}</td>
                                     <td>${aluno.percentual.toFixed(2).replace('.', ',')}%</td>
@@ -1227,9 +1242,10 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
 
             const valorCSV = valor => `"${String(valor ?? '').replace(/"/g, '""')}"`
             const linhas = [
-                ['Aluno', 'Disciplinas', 'Total de faltas', 'Porcentagem de faltas'],
+                ['Aluno', 'Matrícula', 'Disciplinas', 'Total de faltas', 'Porcentagem de faltas'],
                 ...relatorio.map(aluno => [
                     aluno.nome,
+                    aluno.matricula,
                     aluno.disciplinas,
                     aluno.faltas,
                     `${aluno.percentual.toFixed(2).replace('.', ',')}%`
@@ -1409,7 +1425,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
             const textoVoltar = origemDetalhamentoAluno === 'relatorio'
                 ? '← Voltar para o relatório'
                 : '← Voltar para a lista de alunos'
-            let html = `<div class="card"><button type="button" class="secondary-button" onclick="voltarDaDetalhamentoAluno()">${textoVoltar}</button><br><br><b>${nome}</b><br>Total de faltas: ${totalFaltasAluno(nome)} aulas</div>`
+            let html = `<div class="card"><button type="button" class="secondary-button" onclick="voltarDaDetalhamentoAluno()">${textoVoltar}</button><br><br><b>${exibirAluno(nome, matriculaDoAluno(nome))}</b><br>Total de faltas: ${totalFaltasAluno(nome)} aulas</div>`
 
             html += `
 <div class="card">
@@ -1483,11 +1499,11 @@ ${u.map(d => `<option>${d}</option>`).join("")}
                 html += `
 <div class="card">
 <h3>${disc}</h3>
-<div>Mais falta: ${alunos[0]?.[0]}</div>
-<div>Menos falta: ${alunos.at(-1)?.[0]}</div>
+<div>Mais falta: ${alunos[0] ? exibirAluno(alunos[0][0], matriculaDoAluno(alunos[0][0])) : '-'}</div>
+<div>Menos falta: ${alunos.at(-1) ? exibirAluno(alunos.at(-1)[0], matriculaDoAluno(alunos.at(-1)[0])) : '-'}</div>
 
 <h4>Top 10</h4>
-${alunos.slice(0, 10).map(a => `${a[0]} (${a[1]})`).join("<br>")}
+${alunos.slice(0, 10).map(a => `${exibirAluno(a[0], matriculaDoAluno(a[0]))} (${a[1]})`).join("<br>")}
 
 <canvas id="c${i}"></canvas>
 <div class="heatmap" id="h${i}"></div>
@@ -1610,7 +1626,7 @@ ${alunos.slice(0, 10).map(a => `${a[0]} (${a[1]})`).join("<br>")}
                     ).join('');
 
                     htmlResult += `<div class="card">`;
-                    htmlResult += `<h3 style="margin-bottom:6px;">👤 ${escaparHTML(nomeAluno)} <span style="font-size:0.7em; font-weight:normal; color:var(--muted);">(${totalGeralAluno} falta${totalGeralAluno !== 1 ? 's' : ''} no total)</span></h3>`;
+                    htmlResult += `<h3 style="margin-bottom:6px;">👤 ${exibirAluno(nomeAluno, matriculaDoAluno(nomeAluno))} <span style="font-size:0.7em; font-weight:normal; color:var(--muted);">(${totalGeralAluno} falta${totalGeralAluno !== 1 ? 's' : ''} no total)</span></h3>`;
                     htmlResult += `<div style="margin-bottom:12px;">${resumoDisc}</div>`;
 
                     const datasOrdenadas = Object.keys(resultadosAgrupados[nomeAluno]).sort((a, b) => parseData(a) - parseData(b));
@@ -1680,14 +1696,14 @@ ${alunos.slice(0, 10).map(a => `${a[0]} (${a[1]})`).join("<br>")}
             resRisco.innerHTML = ranking.map((a, i) => {
                 let m = a.maiorRisco
                 return `<div class="card ${getClasse(m)}" onclick="det('${a.nome}')">
-<b>${i + 1}. ${a.nome}</b><br>${a.q} disciplinas em risco<br>${(m * 100).toFixed(1)}%
+<b>${i + 1}. ${exibirAluno(a.nome, matriculaDoAluno(a.nome))}</b><br>${a.q} disciplinas em risco<br>${(m * 100).toFixed(1)}%
 </div>`
             }).join("") || (filtro ? "Nenhum aluno nesta faixa" : "Nenhum em risco")
         }
 
         function det(nome) {
 
-            let html = `<div class="card"><b>${nome}</b></div>`
+            let html = `<div class="card"><b>${exibirAluno(nome, matriculaDoAluno(nome))}</b></div>`
 
             let por = {}
 
