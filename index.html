@@ -429,6 +429,24 @@
             border-bottom: 0;
         }
 
+        .detalhar-aluno {
+            padding: 0;
+            min-height: auto;
+            border: 0;
+            background: transparent;
+            color: var(--primary);
+            font: inherit;
+            font-weight: 700;
+            text-align: left;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .detalhar-aluno:hover,
+        .detalhar-aluno:focus-visible {
+            color: var(--primary-dark);
+        }
+
         .relatorio-tabela-wrapper {
             overflow-x: auto;
         }
@@ -1170,7 +1188,7 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
 
             const totalFaltas = relatorio.reduce((total, aluno) => total + aluno.faltas, 0)
             area.innerHTML = `
-                <p class="relatorio-resumo">${relatorio.length} aluno(s) listado(s) · ${totalFaltas} falta(s) no total</p>
+                <p class="relatorio-resumo">${relatorio.length} aluno(s) listado(s) · ${totalFaltas} falta(s) no total. Clique no nome do aluno para ver o detalhamento das faltas.</p>
                 <div class="relatorio-tabela-wrapper">
                     <table class="tabela-relatorio">
                         <thead>
@@ -1178,23 +1196,25 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
                                 <th>Aluno</th>
                                 <th>Disciplinas</th>
                                 <th>Total de faltas</th>
-                                <th>Carga horária</th>
                                 <th>% de faltas</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${relatorio.map(aluno => `
                                 <tr>
-                                    <td>${escaparHTML(aluno.nome)}</td>
+                                    <td><button type="button" class="detalhar-aluno" data-aluno="${escaparHTML(aluno.nome)}">${escaparHTML(aluno.nome)}</button></td>
                                     <td>${aluno.disciplinas}</td>
                                     <td>${aluno.faltas}</td>
-                                    <td>${aluno.cargaHoraria}</td>
                                     <td>${aluno.percentual.toFixed(2).replace('.', ',')}%</td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
                 </div>`
+
+            area.querySelectorAll('.detalhar-aluno').forEach(botao => {
+                botao.addEventListener('click', () => abrirDetalhamentoAluno(botao.dataset.aluno))
+            })
         }
 
         function exportarRelatorioCSV() {
@@ -1206,12 +1226,11 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
 
             const valorCSV = valor => `"${String(valor ?? '').replace(/"/g, '""')}"`
             const linhas = [
-                ['Aluno', 'Disciplinas', 'Total de faltas', 'Carga horária', 'Porcentagem de faltas'],
+                ['Aluno', 'Disciplinas', 'Total de faltas', 'Porcentagem de faltas'],
                 ...relatorio.map(aluno => [
                     aluno.nome,
                     aluno.disciplinas,
                     aluno.faltas,
-                    aluno.cargaHoraria,
                     `${aluno.percentual.toFixed(2).replace('.', ',')}%`
                 ])
             ]
@@ -1226,10 +1245,16 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
             URL.revokeObjectURL(url)
         }
 
+        function abrirDetalhamentoAluno(nome) {
+            openTab('alunos')
+            selAluno(null, nome)
+            document.getElementById('resAluno')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+
         function selAluno(el, nome) {
 
             document.querySelectorAll('#listaAlunos .card').forEach(c => c.classList.remove('selected'))
-            el.classList.add('selected') // Adiciona a classe 'selected' ao cartão clicado
+            if (el) el.classList.add('selected') // Adiciona a classe 'selected' ao cartão clicado
             function formatarData(date) {
                 return date ? date.toLocaleDateString("pt-BR") : "-"
             }
