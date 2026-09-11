@@ -672,6 +672,7 @@
         const DOMINIO_PERMITIDO = "@ifc.edu.br"
 
         let dados = [], dadosTemp = []
+        let origemDetalhamentoAluno = 'alunos'
         let usuarioAutenticado = null
 
         function escaparHTML(text) {
@@ -1246,15 +1247,29 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
         }
 
         function abrirDetalhamentoAluno(nome) {
+            origemDetalhamentoAluno = 'relatorio'
             openTab('alunos')
             selAluno(null, nome)
             document.getElementById('resAluno')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
 
+        function voltarDaDetalhamentoAluno() {
+            if (origemDetalhamentoAluno === 'relatorio') {
+                openTab('relatorio')
+                return
+            }
+
+            document.getElementById('resAluno').innerHTML = ''
+            document.getElementById('listaAlunos')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+
         function selAluno(el, nome) {
 
             document.querySelectorAll('#listaAlunos .card').forEach(c => c.classList.remove('selected'))
-            if (el) el.classList.add('selected') // Adiciona a classe 'selected' ao cartão clicado
+            if (el) {
+                origemDetalhamentoAluno = 'alunos'
+                el.classList.add('selected') // Adiciona a classe 'selected' ao cartão clicado
+            }
             function formatarData(date) {
                 return date ? date.toLocaleDateString("pt-BR") : "-"
             }
@@ -1391,7 +1406,10 @@ Cadastre a origem correspondente no Google Cloud em <b>Authorized JavaScript ori
 
             // ================= HTML =================
 
-            let html = `<div class="card"><b>${nome}</b><br>Total de faltas: ${totalFaltasAluno(nome)} aulas</div>`
+            const textoVoltar = origemDetalhamentoAluno === 'relatorio'
+                ? '← Voltar para o relatório'
+                : '← Voltar para a lista de alunos'
+            let html = `<div class="card"><button type="button" class="secondary-button" onclick="voltarDaDetalhamentoAluno()">${textoVoltar}</button><br><br><b>${nome}</b><br>Total de faltas: ${totalFaltasAluno(nome)} aulas</div>`
 
             html += `
 <div class="card">
